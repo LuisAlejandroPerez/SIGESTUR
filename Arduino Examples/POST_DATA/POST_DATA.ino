@@ -31,27 +31,27 @@ void setup() {
   Serial.println("Iniciando modulo...");
   
   Serial.println("1. Probando conectividad...");
-  sendATCommand("AT");
+  AT_Command("AT");
   delay(1000);
   
   Serial.println("2. Status de la SIM CARD...");
-  sendATCommand("AT+CPIN?");
+  AT_Command("AT+CPIN?");
   delay(1000);
   
   Serial.println("3. Comprobando el registro de la red celular...");
-  sendATCommand("AT+CREG?");
+  AT_Command("AT+CREG?");
   delay(1000);
   
   Serial.println("4. Conectandose a GPRS...");
-  sendATCommand("AT+CGATT=1");
+  AT_Command("AT+CGATT=1");
   delay(2000);
   
   Serial.println("5. Inicializando servicio HTTP...");
-  sendATCommand("AT+HTTPINIT");
+  AT_Command("AT+HTTPINIT");
   delay(1000);
   
   Serial.println("6. Configuracion de parametros HTTP...");
-  sendATCommand("AT+HTTPPARA=\"CID\",1");
+  AT_Command("AT+HTTPPARA=\"CID\",1");
   delay(1000);
   
   Serial.println("¡Inicializacion del modulo completada!");
@@ -59,12 +59,12 @@ void setup() {
 
 void loop() {
   Serial.println("\Enviando un nuevo POST a dweet.io...");
-  postToDweet("456");
+  POST("456");
   Serial.println("Esperando 30 segundos antes del proximo POST...");
   delay(30000);
 }
 
-void sendATCommand(String command) {
+void AT_Command(String command) {
   Serial.println("Enviando comando: " + command);
   mySerial.println(command); // enviar el comando al modulo SIM
   delay(500);
@@ -75,18 +75,18 @@ void sendATCommand(String command) {
   Serial.println("------------------------");
 }
 
-void postToDweet(String value) {
+void POST(String value) {
   String url = "\"https://dweet.io/dweet/for/number?value=" + value + "\"";
   
   Serial.println("Configurando URL para dweet.io...");
-  sendATCommand("AT+HTTPPARA=\"URL\"," + url);
+  AT_Command("AT+HTTPPARA=\"URL\"," + url);
   delay(1000);
   
-  Serial.println("Ejecucion de HTTP GET REQUEST...");
-  sendATCommand("AT+HTTPACTION=0");
+  Serial.println(" HTTP GET REQUEST...");
+  AT_Command("AT+HTTPACTION=0");
   delay(5000);
   
   Serial.println("Respuesta...");
-  sendATCommand("AT+HTTPREAD");
+  AT_Command("AT+HTTPREAD");
   delay(1000);
 }
