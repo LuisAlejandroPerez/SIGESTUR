@@ -1,20 +1,30 @@
+/*
+Este codigo de ejemplo es para establecer comunicacion con mi base de datos de Fire Base. Logrando un PUT & POST de manera satisfactoria. 
+El primer aproach que se hizo fue utilizando los comandos AT para HTTP pero el modulo SIM 7600 no cuenta con metodo PUT en HTTP por lo que 
+cada vez que se hacia un POST se creaba un subnodo nuevo dentro del OMSA_ID y por consiguiente se descarto esta idea. Luego se trato de utilizar
+el motodo TCP IP pero el mismo no soporta HTTPS lo cual utiliza firebase no va se posible. El ultimo aproach que se me ocurrio es utilizar SSL.
+Y es el comando AT que utilice para postear o actualizar la data en la base de datos. 
+
+NOTA: VER IMAGEN SSL_AT_COMAND.PNG PARA VER LOS COMANDOS SSL
+*/
+
 #include <SoftwareSerial.h>
 
-SoftwareSerial mySerial(11, 10); // Pines RX, TX
+SoftwareSerial mySerial(11, 10); 
 
-// Configuración de Firebase
-const String FIREBASE_HOST = "sigestur-tx-default-rtdb.firebaseio.com";
-const String FIREBASE_AUTH = "AIzaSyC7rGR0OTIRZ_QQc3RGZ1HB88FhqudyFV0";
-const String DEVICE_ID = "omsa_001";
+// Config de la DB
+const String FIREBASE_HOST = "sigestur-tx-default-rtdb.firebaseio.com"; //URL de la base de datos
+const String FIREBASE_AUTH = "AIzaSyC7rGR0OTIRZ_QQc3RGZ1HB88FhqudyFV0"; // API KEY
+const String OMSA_ID = "omsa_001";
 
 void setup() {
   Serial.begin(9600);
   mySerial.begin(9600);
   delay(3000);
 
-  Serial.println("Iniciando conexión con SIM7600...");
+  Serial.println("Iniciando modulo SIM7600...");
+  delay(3000);
 
-  // Prueba de conexión con el módulo
   sendATCommand("AT", "OK");
 
   // Habilitar SSL
@@ -23,19 +33,19 @@ void setup() {
 }
 
 void loop() {
-  float latitude = 19.4326;
-  float longitude = -99.1332;
+  float latitude = 19.4326; // Data hardcodeada 
+  float longitude = -99.1332; // Data hardcodeada 
   
   postToFirebase(latitude, longitude);
-  delay(30000);
+  delay(30000); // Esperar 30s para postear DATA nuevamente
 }
 
 void postToFirebase(float latitude, float longitude) {
   Serial.println("Enviando datos a Firebase...");
 
-  // Abrir conexión SSL
+  // Abrir conexion al servidor SSL
   if (!sendATCommand("AT+CCHOPEN=0,\"" + FIREBASE_HOST + "\",443", "+CCHOPEN: 0,0")) {
-    Serial.println("Error al abrir conexión SSL");
+    Serial.println("Error al establecer conexion con el servidor SSL");
     return;
   }
 
@@ -43,7 +53,7 @@ void postToFirebase(float latitude, float longitude) {
                     ",\"longitude\":" + String(longitude, 6) + 
                     ",\"timestamp\":" + String(millis()) + "}";
 
-  String request = "PUT /gps_data/omsas/" + DEVICE_ID + ".json?auth=" + FIREBASE_AUTH + " HTTP/1.1\r\n";
+  String request = "PUT /gps_data/omsas/" + OMSA_ID + ".json?auth=" + FIREBASE_AUTH + " HTTP/1.1\r\n";
   request += "Host: " + FIREBASE_HOST + "\r\n";
   request += "Content-Type: application/json\r\n";
   request += "Content-Length: " + String(jsonData.length()) + "\r\n";
@@ -55,7 +65,7 @@ void postToFirebase(float latitude, float longitude) {
   mySerial.print(request);
   delay(5000);
 
-  // Cerrar conexión
+  // Cerrar la sesion con el servidor en la instancia 0
   sendATCommand("AT+CCHCLOSE=0", "OK");
 }
 
