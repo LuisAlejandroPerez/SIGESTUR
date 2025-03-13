@@ -15,8 +15,8 @@
 
 // Definicion de pines 
 
-#define TX 11 // Rx del Micro
-#define RX 10 // Tx del Micro
+#define TX 7 // Rx del Micro
+#define RX 8 // Tx del Micro
 
 // buffer para respuestas
 char replybuffer[255];

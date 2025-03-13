@@ -10,7 +10,7 @@ NOTA: VER IMAGEN SSL_AT_COMAND.PNG PARA VER LOS COMANDOS SSL
 
 #include <SoftwareSerial.h>
 
-SoftwareSerial mySerial(11, 10); 
+SoftwareSerial mySerial(7, 8); 
 
 // Config de la DB
 const String FIREBASE_HOST = "sigestur-tx-default-rtdb.firebaseio.com"; //URL de la base de datos

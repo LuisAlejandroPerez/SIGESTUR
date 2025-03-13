@@ -25,7 +25,7 @@ Es posible tener múltiples puertos seriales de software con velocidades de hast
 
 #include <SoftwareSerial.h>
 
-SoftwareSerial mySerial(11,10); // definiendo pines 11 (RX) y 10 (TX) para la comunicacion serial
+SoftwareSerial mySerial(7,8); // definiendo pines 11 (RX) y 10 (TX) para la comunicacion serial
 
 void setup() {
   Serial.begin(9600); // Inicio de comunicacion en los pines 0 y 1 a una velocidad de 9600 baudios

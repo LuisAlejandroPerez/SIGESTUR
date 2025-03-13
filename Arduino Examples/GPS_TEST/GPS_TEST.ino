@@ -30,7 +30,7 @@ VER IMAGEN RAW_DATA.PNG para visualizar como se ve las cordenadas sin pasar por 
 
 #include <SoftwareSerial.h>
 
-SoftwareSerial mySerial(11, 10);
+SoftwareSerial mySerial(7, 8);
 
 void setup() {
   // En esta funcion se inicializa la comunicación serial a 9600 bps tanto en el puerto serial estándar como en mySerial. 
