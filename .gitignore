@@ -35,3 +35,9 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# Ignora el entono virtual
+venv/ 
+
+# Ignora todos los archivos .jason
+*.json
