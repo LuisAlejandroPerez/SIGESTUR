@@ -15,7 +15,7 @@ SoftwareSerial mySerial(7, 8);
 // Config de la DB
 const String FIREBASE_HOST = "sigestur-tx-default-rtdb.firebaseio.com"; //URL de la base de datos
 const String FIREBASE_AUTH = "AIzaSyC7rGR0OTIRZ_QQc3RGZ1HB88FhqudyFV0"; // API KEY
-const String OMSA_ID = "omsa_001";
+const String OMSA_ID = "C19M";
 
 void setup() {
   Serial.begin(9600);
@@ -53,7 +53,7 @@ void postToFirebase(float latitude, float longitude) {
                     ",\"longitude\":" + String(longitude, 6) + 
                     ",\"timestamp\":" + String(millis()) + "}";
 
-  String request = "PUT /gps_data/omsas/" + OMSA_ID + ".json?auth=" + FIREBASE_AUTH + " HTTP/1.1\r\n";
+  String request = "PUT /gps_data/trip_ID/" + OMSA_ID + ".json?auth=" + FIREBASE_AUTH + " HTTP/1.1\r\n";
   request += "Host: " + FIREBASE_HOST + "\r\n";
   request += "Content-Type: application/json\r\n";
   request += "Content-Length: " + String(jsonData.length()) + "\r\n";

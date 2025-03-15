@@ -1,0 +1,5 @@
+route_id,agency_id,route_short_name,route_long_name,route_type
+LN01,OMSA,AVLNUP,Corredor Abraham Lincoln Subiendo,3
+LN02,OMSA,AVLNDW,Corredor Abraham Lincoln Bajando,3
+PU01,OMSA,PosgradoJ,Salida del parqueo de Posgrado por la Julia,3
+PU02,OMSA,PosgradoB,Entrada del parqueo de Posgrado por la Bolivar,3

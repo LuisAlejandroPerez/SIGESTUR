@@ -1,0 +1,2 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
+OMSA,"Operadora Metropolitana de Servicios de Autobuses (OMSA)",https://www.omsa.gob.do/,America/Santo_Domingo,es,(809) 221-6672,https://www.omsa.gob.do/transparencia/procesos-de-compras,servicioalcliente@omsa.gob.do

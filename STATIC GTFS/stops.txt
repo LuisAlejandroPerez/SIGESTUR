@@ -1,0 +1,7 @@
+stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id
+C19P34,Agora Mall,Av. Lincoln Agora Mall,18.482538,-69.939657,LU
+C19P26, DOM Americano,Av. Lincoln DOM Americano,18.455680,-69.924690,LU
+C19P11,SD Motors,AV. Lincoln SD Motors,18.482501,-69.939816,LD
+C19P16,Plaza Lincoln,AV. Lincoln Plaza Linconl,18.464974,-69.930025,LD
+P10C01,La Julia,Salida del parque de Post Grado,18.461785, -69.929528,PL
+P10C02,Bolivar,Entrada al parque de Posgrado por la Bolivar,18.461592,-69.931278,PL
