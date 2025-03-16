@@ -6,8 +6,11 @@ from google.transit import gtfs_realtime_pb2  # Para leer vehicle_positions.pb
 # 📍 Configuración
 API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
 STOP_ID = "C19P34"  # Parada asignada a esta Raspberry
-GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
-GTFS_STATIC_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/STATIC GTFS/"
+GTFS_RT_PATH = "C:/Users/luisa/Desktop/SIGESTUR/GTFS RT/vehicle_positions.pb"
+GTFS_STATIC_PATH = "C:/Users/luisa/Desktop/SIGESTUR/STATIC GTFS/"
+
+# 🛑 Guardar buses que han llegado
+buses_en_parada = set()
 
 
 def load_stops(file_path):
@@ -48,8 +51,8 @@ def fetch_vehicle_positions(file_path):
 def request_eta(lat, lon, stop_lat, stop_lon):
     """Solicita el cálculo de ETA a la API de Google Routes."""
     data = {
-        "origins": [{"waypoint": {"location": {"latLng": {"latitude": lat, "longitude": lon}}}}],
-        "destinations": [{"waypoint": {"location": {"latLng": {"latitude": stop_lat, "longitude": stop_lon}}}}],
+        "origins": [{"waypoint": {"location": {"latLng": {"latitude": lat, "longitude": lon}}}}], 
+        "destinations": [{"waypoint": {"location": {"latLng": {"latitude": stop_lat, "longitude": stop_lon}}}}], 
         "travelMode": "DRIVE",
         "routingPreference": "TRAFFIC_AWARE"
     }
@@ -103,7 +106,21 @@ for entity in feed.entity:
                 if res.get("condition", "UNKNOWN") == "ROUTE_EXISTS":
                     distance = res["distanceMeters"]
                     duration = int(res["duration"].replace("s", ""))
-                    print(f"🚌 Bus {trip_id} -> {STOP_ID}: {format_distance(distance)}, ETA: {format_time(duration)}")
+
+                    # 📌 Detectar llegada
+                    if distance <= 20 or duration <= 10:
+                        if trip_id not in buses_en_parada:
+                            print(f"✅ 🚌 Bus {trip_id} ha llegado a {STOP_ID}")
+                            buses_en_parada.add(trip_id)
+
+                    # 📌 Detectar si ya pasó
+                    elif trip_id in buses_en_parada and distance > 50:
+                        print(f"🛑 Bus {trip_id} ha salido de {STOP_ID}")
+                        buses_en_parada.remove(trip_id)
+
+                    # 📌 Mostrar buses en ruta
+                    else:
+                        print(f"🚌 Bus {trip_id} -> {STOP_ID}: {format_distance(distance)}, ETA: {format_time(duration)}")
                 else:
                     print(f"❌ No se encontró ruta válida para {trip_id}")
         else:

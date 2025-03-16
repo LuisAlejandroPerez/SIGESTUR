@@ -4,7 +4,7 @@ from google.transit import gtfs_realtime_pb2
 import time
 
 # Configurar Firebase con tu archivo credentials.json
-cred = credentials.Certificate(r"C:\Users\luisa\OneDrive\Escritorio\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-e463993ccf.json")  
+cred = credentials.Certificate(r"C:\Users\luisa\Desktop\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-1db6dbb0ee.json")  
 firebase_admin.initialize_app(cred, {"databaseURL": 'https://sigestur-tx-default-rtdb.firebaseio.com/'})
 
 def generate_gtfs_rt():
