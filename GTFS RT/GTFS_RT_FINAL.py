@@ -21,7 +21,7 @@ GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_posi
 
 # Nuevas configuraciones
 ARRIVAL_THRESHOLD = 20  # Distancia en metros para considerar que un bus ha llegado
-DEPARTURE_TIMEOUT = 30  # Tiempo en segundos para considerar que un bus se ha ido (30 segundos)
+DEPARTURE_TIMEOUT = 15  # Tiempo en segundos para considerar que un bus se ha ido (15 segundos)
 
 # 🏗️ Inicializar Firebase
 cred = credentials.Certificate(FIREBASE_CREDENTIALS)
