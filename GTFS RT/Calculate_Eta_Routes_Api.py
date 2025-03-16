@@ -6,8 +6,8 @@ from google.transit import gtfs_realtime_pb2  # Para leer vehicle_positions.pb
 # 📍 Configuración
 API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
 STOP_ID = "C19P34"  # Parada asignada a esta Raspberry
-GTFS_RT_PATH = "C:/Users/luisa/Desktop/SIGESTUR/GTFS RT/vehicle_positions.pb"
-GTFS_STATIC_PATH = "C:/Users/luisa/Desktop/SIGESTUR/STATIC GTFS/"
+GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
+GTFS_STATIC_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/STATIC GTFS/"
 
 # 🛑 Guardar buses que han llegado
 buses_en_parada = set()

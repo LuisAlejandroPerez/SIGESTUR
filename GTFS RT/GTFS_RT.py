@@ -7,11 +7,11 @@ from google.transit import gtfs_realtime_pb2
 from datetime import datetime
 
 # Configuración de Firebase
-FIREBASE_CREDENTIALS = r"C:\Users\luisa\Desktop\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-1db6dbb0ee.json"
+FIREBASE_CREDENTIALS = r"C:\Users\luisa\OneDrive\Escritorio\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-e463993ccf.json"
 DATABASE_URL = "https://sigestur-tx-default-rtdb.firebaseio.com/"
 BUCKET_NAME = "sigestur-tx.firebasestorage.app"
 STATIC_GTFS_FOLDER = "STATIC GTFS/"
-LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"), "Desktop", "SIGESTUR", "STATIC GTFS")
+LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"), "OneDrive", "Escritorio","SIGESTUR", "STATIC GTFS")
 
 # Inicializar Firebase
 cred = credentials.Certificate(FIREBASE_CREDENTIALS)

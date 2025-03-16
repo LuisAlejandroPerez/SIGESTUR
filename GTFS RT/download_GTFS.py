@@ -7,7 +7,7 @@ def download_gtfs_directory():
     to a folder on the desktop.
     """
     # Set up credentials
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\luisa\Desktop\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-1db6dbb0ee.json"
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\luisa\OneDrive\Escritorio\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-e463993ccf.json"
     
     # Create storage client
     storage_client = storage.Client()
@@ -19,7 +19,7 @@ def download_gtfs_directory():
     directory_path = "STATIC GTFS/"
     
     # Local directory to save files (on desktop)
-    local_directory = os.path.join(os.path.expanduser("~"), "Desktop","SIGESTUR", "STATIC GTFS")
+    local_directory = os.path.join(os.path.expanduser("~"), "OneDrive", "Escritorio","SIGESTUR", "STATIC GTFS")
     
     # Create local directory if it doesn't exist
     os.makedirs(local_directory, exist_ok=True)
