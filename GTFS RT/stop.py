@@ -1,20 +1,16 @@
 import csv
-from google.transit import gtfs_realtime_pb2  # Librería para decodificar vehicle_positions.pb
+from google.transit import gtfs_realtime_pb2  
 
-# 📍 Definir manualmente el STOP_ID de esta Raspberry Pi
-STOP_ID = "C19P34"  # Asigna la parada específica para esta Raspberry
+"""NOTA: Cada raspberry tiene un STOP_ID asignado"""
 
-# 📌 Ruta de los archivos GTFS en tu PC
+STOP_ID = "C19P34"  
 BASE_DIR = r"C:\Users\luisa\OneDrive\Escritorio\SIGESTUR"
 STATIC_GTFS_DIR = f"{BASE_DIR}\\STATIC GTFS"
 REALTIME_GTFS_DIR = f"{BASE_DIR}\\GTFS RT"
-
 stops_file = f"{STATIC_GTFS_DIR}\\stops.txt"
 stop_times_file = f"{STATIC_GTFS_DIR}\\stop_times.txt"
 vehicle_positions_file = f"{REALTIME_GTFS_DIR}\\vehicle_positions.pb"
 
-
-# 📌 Cargar stops.txt (Paradas y ubicaciones)
 stops = {}  # Diccionario {stop_id: (lat, lon)}
 
 try:
@@ -26,13 +22,13 @@ try:
             lon = float(row["stop_lon"])
             stops[stop_id] = (lat, lon)
 
-    print(f"✅ Cargadas {len(stops)} paradas.")
+    print(f"Cargadas {len(stops)} paradas.")
 except FileNotFoundError:
-    print(f"❌ Error: No se encontró el archivo stops.txt en {stops_file}")
+    print(f"Error no se encontro stops.txt en: {stops_file}")
     exit()
 
-# 📌 Relacionar trip_id con paradas desde stop_times.txt
-trips_to_stops = {}  # Diccionario {trip_id: [stop_id, stop_id, ...]}
+# TODO:Relacionar trip_id con paradas desde stop_times.txt
+trips_to_stops = {}  
 
 try:
     with open(stop_times_file, newline="", encoding="utf-8") as csvfile:
@@ -46,30 +42,34 @@ try:
             
             trips_to_stops[trip_id].append(stop_id)
 
-    print(f"✅ Relacionados {len(trips_to_stops)} trips con sus paradas.")
+    print(f" Se relacionaron {len(trips_to_stops)} viajes con sus paradas")
 except FileNotFoundError:
-    print(f"❌ Error: No se encontró el archivo stop_times.txt en {stop_times_file}")
+    print(f"Error: No se encontro stop_times.txt en {stop_times_file}")
     exit()
 
-# 📌 Filtrar trips que pasan por el STOP_ID asignado a esta Raspberry
+# En la seccion acontinuacion hay que filtrar los viajes  que pasan por 
+# el STOP_ID asignado a esta raspberry para evitar cargar informacion de mas.
+
 trips_for_raspberry = [trip for trip, stops in trips_to_stops.items() if STOP_ID in stops]
 
 if not trips_for_raspberry:
-    print(f"⚠️ No hay trips asociados a la parada {STOP_ID}. Verifica tu stop_times.txt")
+    print(f"No hay viajes asociados a la parada {STOP_ID}")
     exit()
 
-print(f"🚏 Esta Raspberry solo mostrará los buses de los trips: {trips_for_raspberry}")
+print(f"Esta raspberry mostrara las omsas de los viajes: {trips_for_raspberry}")
 
-# 📌 Cargar vehicle_positions.pb y filtrar solo los buses de interés
+#Por ultimo como ya filtramos las paradas debemos de cargar solo las OMSAS
+#de interes digase las omsas que tienen un viaje por esa parada o que pasan por esta.
+
 feed = gtfs_realtime_pb2.FeedMessage()
 
 try:
     with open(vehicle_positions_file, "rb") as f:
         feed.ParseFromString(f.read())
 
-    print("\n🚍 Buses en ruta:")
+    print("\nOMSAS ruta:")
 
-    buses_mostrados = 0
+    OMSAS_mostradas = 0
     for entity in feed.entity:
         vehicle = entity.vehicle
         trip_id = vehicle.trip.trip_id
@@ -77,14 +77,14 @@ try:
         lon = vehicle.position.longitude
         timestamp = vehicle.timestamp
 
-        # Solo mostramos buses que pertenecen a los trips de esta Raspberry
+        # Con estra condifcional solamente se van a ver los las omsas que estan en la ruta de esta raspberry
         if trip_id in trips_for_raspberry:
-            print(f"🚌 Bus en ruta {trip_id}: ({lat}, {lon}) - Última actualización: {timestamp}")
-            buses_mostrados += 1
+            print(f"OMSA en ruta {trip_id}: ({lat}, {lon}) - ultima actualizacion: {timestamp}")
+            OMSAS_mostradas += 1
 
-    if buses_mostrados == 0:
-        print("⚠️ No hay buses en ruta para esta parada en este momento.")
+    if OMSAS_mostradas == 0:
+        print("No hay OMSAS en ruta para esta parada en este momento")
 
 except FileNotFoundError:
-    print(f"❌ Error: No se encontró el archivo vehicle_positions.pb en {vehicle_positions_file}")
+    print(f"Error: No se encontro  vehicle_positions.pb en {vehicle_positions_file}")
     exit()
