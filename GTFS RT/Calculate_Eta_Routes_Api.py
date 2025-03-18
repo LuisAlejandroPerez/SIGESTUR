@@ -1,20 +1,17 @@
 import requests
 import json
 import csv
-from google.transit import gtfs_realtime_pb2  # Para leer vehicle_positions.pb
+from google.transit import gtfs_realtime_pb2 
 
-# 📍 Configuración
+
 API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
-STOP_ID = "C19P34"  # Parada asignada a esta Raspberry
+STOP_ID = "C19P34"  
 GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
 GTFS_STATIC_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/STATIC GTFS/"
-
-# 🛑 Guardar buses que han llegado
 buses_en_parada = set()
 
 
 def load_stops(file_path):
-    """Carga los datos de stops.txt en un diccionario."""
     stops = {}
     with open(file_path, newline="", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile)
@@ -27,7 +24,6 @@ def load_stops(file_path):
 
 
 def load_trips(file_path):
-    """Relaciona trip_id con paradas en un diccionario."""
     trips_to_stops = {}
     with open(file_path, newline="", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile)
@@ -41,7 +37,6 @@ def load_trips(file_path):
 
 
 def fetch_vehicle_positions(file_path):
-    """Carga los datos en tiempo real desde vehicle_positions.pb."""
     feed = gtfs_realtime_pb2.FeedMessage()
     with open(file_path, "rb") as f:
         feed.ParseFromString(f.read())
@@ -49,7 +44,7 @@ def fetch_vehicle_positions(file_path):
 
 
 def request_eta(lat, lon, stop_lat, stop_lon):
-    """Solicita el cálculo de ETA a la API de Google Routes."""
+    """Esta funcion es para hacerle un Request a la API de Google """
     data = {
         "origins": [{"waypoint": {"location": {"latLng": {"latitude": lat, "longitude": lon}}}}], 
         "destinations": [{"waypoint": {"location": {"latLng": {"latitude": stop_lat, "longitude": stop_lon}}}}], 
@@ -70,19 +65,18 @@ def request_eta(lat, lon, stop_lat, stop_lon):
 
 
 def format_distance(distance_meters):
-    """Convierte metros a kilómetros si es mayor a 1000m."""
+    """Funcion para convertir m a Km"""
     return f"{distance_meters / 1000:.1f} km" if distance_meters >= 1000 else f"{distance_meters} m"
 
 
 def format_time(duration_seconds):
-    """Convierte segundos a minutos si es mayor a 60s."""
+    """Converitr segundo a minutos"""
     return f"{duration_seconds // 60} min {duration_seconds % 60} sec" if duration_seconds >= 60 else f"{duration_seconds} sec"
 
 
-# 🚀 Carga de datos
 stops = load_stops(f"{GTFS_STATIC_PATH}stops.txt")
 if STOP_ID not in stops:
-    print(f"❌ Error: STOP_ID {STOP_ID} no encontrado en stops.txt")
+    print(f"Error: STOP_ID {STOP_ID} no encontrado en stops.txt")
     exit()
 stop_lat, stop_lon = stops[STOP_ID]
 
@@ -91,8 +85,8 @@ trips_for_raspberry = [trip for trip, stops in trips_to_stops.items() if STOP_ID
 
 feed = fetch_vehicle_positions(GTFS_RT_PATH)
 
-# 🚍 Calculando ETA para buses en ruta
-print("\n🚍 Calculando ETA para buses en ruta:")
+
+print("\nCalculando tiempo estimado de llegada para las OMSAS:")
 for entity in feed.entity:
     vehicle = entity.vehicle
     trip_id = vehicle.trip.trip_id
@@ -107,21 +101,20 @@ for entity in feed.entity:
                     distance = res["distanceMeters"]
                     duration = int(res["duration"].replace("s", ""))
 
-                    # 📌 Detectar llegada
                     if distance <= 20 or duration <= 10:
                         if trip_id not in buses_en_parada:
-                            print(f"✅ 🚌 Bus {trip_id} ha llegado a {STOP_ID}")
+                            print(f" OMSA {trip_id} ha llegado a {STOP_ID}")
                             buses_en_parada.add(trip_id)
 
-                    # 📌 Detectar si ya pasó
+                    #  Detectar si ya paso por la parada 
                     elif trip_id in buses_en_parada and distance > 50:
-                        print(f"🛑 Bus {trip_id} ha salido de {STOP_ID}")
+                        print(f"OMSA {trip_id} ha salido de {STOP_ID}")
                         buses_en_parada.remove(trip_id)
 
-                    # 📌 Mostrar buses en ruta
+                    # Mostrar OMSAS en ruta
                     else:
-                        print(f"🚌 Bus {trip_id} -> {STOP_ID}: {format_distance(distance)}, ETA: {format_time(duration)}")
+                        print(f"OMSA {trip_id} -> {STOP_ID}: {format_distance(distance)}, ETA: {format_time(duration)}")
                 else:
-                    print(f"❌ No se encontró ruta válida para {trip_id}")
+                    print(f"No se encontro ruta valida para {trip_id}")
         else:
-            print(f"⚠️ Error API para {trip_id}")
+            print(f"⚠️ Error en la API para {trip_id}")
