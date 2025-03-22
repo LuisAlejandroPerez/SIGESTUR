@@ -5,13 +5,14 @@ SoftwareSerial mySerial(7, 8);
 // Firebase Config
 const String FIREBASE_HOST = "sigestur-tx-default-rtdb.firebaseio.com";
 const String FIREBASE_AUTH = "AIzaSyC7rGR0OTIRZ_QQc3RGZ1HB88FhqudyFV0";
-const String OMSA_ID = "C19M";
+const String OMSA_ID = "P01H";
 
 // Global variables for GPS coordinates
 float currentLatitude = 0.0;
 float currentLongitude = 0.0;
 
-void setup() {
+void setup()
+{
   Serial.begin(9600);
   mySerial.begin(9600);
   delay(3000);
@@ -23,27 +24,30 @@ void setup() {
   sendATCommand("AT+CGNSSMODE=15,1");
   sendATCommand("AT+CGPSNMEA=200191");
   sendATCommand("AT+CGPS=1");
-  
+
   // Initialize SSL for Firebase
   sendATCommand("AT+CCHSTART");
-  
+
   Serial.println("Inicializacion completada!");
 }
 
-void loop() {
+void loop()
+{
   // Get GPS location
   Serial.println("\nSolicitando ubicacion del GPS...");
   sendATCommand("AT+CGPSINFO");
-  
+
   // If we have valid coordinates, post to Firebase
-  if (currentLatitude != 0.0 && currentLongitude != 0.0) {
+  if (currentLatitude != 0.0 && currentLongitude != 0.0)
+  {
     postToFirebase(currentLatitude, currentLongitude);
   }
-  
-  delay(30000); // Wait 30 seconds before next update
+
+  delay(15000); // Wait 15 seconds before next update
 }
 
-void postToFirebase(float latitude, float longitude) {
+void postToFirebase(float latitude, float longitude)
+{
   Serial.println("Enviando datos a Firebase...");
 
   String openCommand = "AT+CCHOPEN=0,\"" + FIREBASE_HOST + "\",443";
@@ -67,7 +71,8 @@ void postToFirebase(float latitude, float longitude) {
   sendATCommand("AT+CCHCLOSE=0");
 }
 
-void sendATCommand(String command) {
+void sendATCommand(String command)
+{
   Serial.println("Enviando comando: " + command);
   mySerial.println(command);
   delay(500);
@@ -78,17 +83,21 @@ void sendATCommand(String command) {
   Serial.println(response);
   Serial.println("------------------------");
 
-  if (response.indexOf("+CGPSINFO:") != -1) {
+  if (response.indexOf("+CGPSINFO:") != -1)
+  {
     parseGPSData(response);
   }
 }
 
-String readSerialResponse() {
+String readSerialResponse()
+{
   String response = "";
   long timeout = millis() + 2000;
 
-  while (millis() < timeout) {
-    while (mySerial.available()) {
+  while (millis() < timeout)
+  {
+    while (mySerial.available())
+    {
       char c = mySerial.read();
       response += c;
     }
@@ -96,8 +105,10 @@ String readSerialResponse() {
   return response;
 }
 
-float convertToDecimal(String value, bool isLongitude) {
-  if (value.length() < 4) return 0.0;
+float convertToDecimal(String value, bool isLongitude)
+{
+  if (value.length() < 4)
+    return 0.0;
 
   int degreeDigits = isLongitude ? 3 : 2;
   float degrees = value.substring(0, degreeDigits).toFloat();
@@ -105,14 +116,16 @@ float convertToDecimal(String value, bool isLongitude) {
   return degrees + (minutes / 60);
 }
 
-void parseGPSData(String data) {
+void parseGPSData(String data)
+{
   int startIdx = data.indexOf(":") + 2;
   int firstComma = data.indexOf(",", startIdx);
   int secondComma = data.indexOf(",", firstComma + 1);
   int thirdComma = data.indexOf(",", secondComma + 1);
   int fourthComma = data.indexOf(",", thirdComma + 1);
 
-  if (firstComma == -1 || secondComma == -1 || thirdComma == -1 || fourthComma == -1) {
+  if (firstComma == -1 || secondComma == -1 || thirdComma == -1 || fourthComma == -1)
+  {
     Serial.println("Error: No se pudo analizar la respuesta del GPS.");
     return;
   }
@@ -125,8 +138,10 @@ void parseGPSData(String data) {
   float latitude = convertToDecimal(latRaw, false);
   float longitude = convertToDecimal(lonRaw, true);
 
-  if (latDir == "S") latitude *= -1;
-  if (lonDir == "W") longitude *= -1;
+  if (latDir == "S")
+    latitude *= -1;
+  if (lonDir == "W")
+    longitude *= -1;
 
   // Update global coordinates
   currentLatitude = latitude;

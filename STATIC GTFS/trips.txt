@@ -5,3 +5,5 @@ C19D,LN02,WEEKS,Hacia SD Motors AV. Lincoln bajando
 C19S,LN02,WEEKS,Hacia Plaza Lincoln AV. Lincoln bajando
 P18U,PU01,WEEKS,Hacia la Julia saliendo del parqueo de Posgrado
 P17B,PU02,WEEKS,Hacia la Bolivar entrando del parqueo de Posgrado
+P01H,HA01,WEEKS,Hacia Hainamosa entrando por la Mella
+P02H,HA01,WEEKS,Hacia Hainamosa entrando por la Mella

@@ -5,3 +5,6 @@ C19P11,SD Motors,AV. Lincoln SD Motors,18.482501,-69.939816,LD
 C19P16,Plaza Lincoln,AV. Lincoln Plaza Linconl,18.464974,-69.930025,LD
 P10C01,La Julia,Salida del parque de Post Grado,18.461785, -69.929528,PL
 P10C02,Bolivar,Entrada al parque de Posgrado por la Bolivar,18.461592,-69.931278,PL
+P10H01,Hainamosa,Entrada de Hainamosa por la mella,18.523871,-69.827180,HA
+
+
