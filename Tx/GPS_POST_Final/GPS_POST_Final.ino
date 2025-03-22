@@ -103,11 +103,15 @@ void loop()
   
   // If we have valid coordinates, post to Firebase
   if (currentLatitude != 0.0 && currentLongitude != 0.0) {
+    Serial.println("Coordenadas validas encontradas, enviando a Firebase...");
     postToFirebase(currentLatitude, currentLongitude);
+  } else {
+    Serial.println("No se encontraron coordenadas validas. Esperando...");
   }
   
   delay(15000); // Wait 15 seconds before next update
 }
+
 
 void postToFirebase(float latitude, float longitude)
 {
@@ -154,60 +158,125 @@ void sendATCommand(String command)
 String readSerialResponse()
 {
   String response = "";
-  long timeout = millis() + 2000;
+  long timeout = millis() + 3000; // Increase timeout to 3 seconds
   
   while (millis() < timeout) {
     while (mySerial.available()) {
       char c = mySerial.read();
       response += c;
+      delay(2); // Small delay to allow buffer to fill
+    }
+    
+    // If we've received an OK response and no data is coming in for 500ms, we can exit
+    if (response.indexOf("OK") != -1) {
+      delay(500);
+      if (!mySerial.available()) {
+        break;
+      }
     }
   }
   return response;
 }
+
 
 float convertToDecimal(String value, bool isLongitude)
 {
   if (value.length() < 4)
     return 0.0;
   
+  // The format is typically DDMM.MMMM for latitude and DDDMM.MMMM for longitude
   int degreeDigits = isLongitude ? 3 : 2;
+  
+  // Make sure we have enough characters
+  if (value.length() <= degreeDigits) {
+    Serial.println("Invalid coordinate format");
+    return 0.0;
+  }
+  
+  // Extract degrees and minutes
   float degrees = value.substring(0, degreeDigits).toFloat();
   float minutes = value.substring(degreeDigits).toFloat();
-  return degrees + (minutes / 60);
+  
+  // Convert to decimal degrees
+  float decimalDegrees = degrees + (minutes / 60.0);
+  
+  // Debug output
+  Serial.print("Degrees: "); Serial.println(degrees);
+  Serial.print("Minutes: "); Serial.println(minutes);
+  Serial.print("Decimal: "); Serial.println(decimalDegrees, 6);
+  
+  return decimalDegrees;
 }
+
 
 void parseGPSData(String data)
 {
-  int startIdx = data.indexOf(":") + 2;
-  int firstComma = data.indexOf(",", startIdx);
-  int secondComma = data.indexOf(",", firstComma + 1);
-  int thirdComma = data.indexOf(",", secondComma + 1);
-  int fourthComma = data.indexOf(",", thirdComma + 1);
-  
-  if (firstComma == -1 || secondComma == -1 || thirdComma == -1 || fourthComma == -1) {
-    Serial.println("Error: No se pudo analizar la respuesta del GPS.");
-    return;
+  // Check if we have a valid GPS response
+  if (data.indexOf("+CGPSINFO:") != -1) {
+    // Remove any extra spaces after the colon
+    int startIdx = data.indexOf(":") + 1;
+    while (data.charAt(startIdx) == ' ') startIdx++;
+    
+    // Check if we have empty data (no fix yet)
+    if (data.substring(startIdx, startIdx + 2) == ",,") {
+      Serial.println("No GPS fix available yet. Keep the device with clear view of the sky.");
+      return;
+    }
+    
+    // Extract the GPS data parts
+    String gpsData = data.substring(startIdx);
+    
+    // Split by commas
+    int commaPositions[8]; // We need to track 8 commas
+    int commaCount = 0;
+    int searchPos = 0;
+    
+    // Find all comma positions
+    for (int i = 0; i < 8 && searchPos < gpsData.length(); i++) {
+      commaPositions[i] = gpsData.indexOf(',', searchPos);
+      if (commaPositions[i] == -1) {
+        Serial.println("Error: Invalid GPS data format");
+        return;
+      }
+      searchPos = commaPositions[i] + 1;
+      commaCount++;
+    }
+    
+    // Now extract the latitude and longitude
+    if (commaCount >= 4) {
+      String latRaw = gpsData.substring(0, commaPositions[0]);
+      String latDir = gpsData.substring(commaPositions[0] + 1, commaPositions[1]);
+      String lonRaw = gpsData.substring(commaPositions[1] + 1, commaPositions[2]);
+      String lonDir = gpsData.substring(commaPositions[2] + 1, commaPositions[3]);
+      
+      // Debug output
+      Serial.println("Raw GPS data:");
+      Serial.print("Lat Raw: "); Serial.println(latRaw);
+      Serial.print("Lat Dir: "); Serial.println(latDir);
+      Serial.print("Lon Raw: "); Serial.println(lonRaw);
+      Serial.print("Lon Dir: "); Serial.println(lonDir);
+      
+      // Convert to decimal degrees
+      float latitude = convertToDecimal(latRaw, false);
+      float longitude = convertToDecimal(lonRaw, true);
+      
+      if (latDir == "S")
+        latitude *= -1;
+      if (lonDir == "W")
+        longitude *= -1;
+      
+      // Update global coordinates
+      currentLatitude = latitude;
+      currentLongitude = longitude;
+      
+      Serial.print("Latitud: ");
+      Serial.println(latitude, 6);
+      Serial.print("Longitud: ");
+      Serial.println(longitude, 6);
+    } else {
+      Serial.println("Error: Not enough data in GPS response");
+    }
+  } else {
+    Serial.println("No GPS data found in response");
   }
-  
-  String latRaw = data.substring(startIdx, firstComma);
-  String latDir = data.substring(firstComma + 1, secondComma);
-  String lonRaw = data.substring(secondComma + 1, thirdComma);
-  String lonDir = data.substring(thirdComma + 1, fourthComma);
-  
-  float latitude = convertToDecimal(latRaw, false);
-  float longitude = convertToDecimal(lonRaw, true);
-  
-  if (latDir == "S")
-    latitude *= -1;
-  if (lonDir == "W")
-    longitude *= -1;
-  
-  // Update global coordinates
-  currentLatitude = latitude;
-  currentLongitude = longitude;
-  
-  Serial.print("Latitud: ");
-  Serial.println(latitude, 6);
-  Serial.print("Longitud: ");
-  Serial.println(longitude, 6);
 }
