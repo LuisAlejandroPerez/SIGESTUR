@@ -18,7 +18,7 @@ API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
 STOP_ID = "C19P34"  
 GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
 ARRIVAL_THRESHOLD = 20  
-DEPARTURE_TIMEOUT = 15  
+DEPARTURE_TIMEOUT = 60  
 
 # Inizializacion de los servicios CLOUD
 cred = credentials.Certificate(FIREBASE_CREDENTIALS)
@@ -173,9 +173,14 @@ def main():
                             duration = int(res["duration"].replace("s", ""))
                             
                             
-                            if distance <= ARRIVAL_THRESHOLD and trip_id not in arrived_buses:
-                                arrived_buses[trip_id] = datetime.now()
-                                print(f"!!!!omsa {trip_id} ha llegado a la parada!!!!! {STOP_ID}!")
+                            if distance <= ARRIVAL_THRESHOLD:
+                                if trip_id not in arrived_buses:
+                                    arrived_buses[trip_id] = datetime.now()
+                                    print(f"!!!!omsa {trip_id} ha llegado a la parada!!!!! {STOP_ID}!")
+                                else:
+                                    # Aquí actualizamos el tiempo de llegada en cada iteración
+                                    arrived_buses[trip_id] = arrived_buses[trip_id]  # No cambia, pero mantiene el tiempo
+                             
                             
                             bus_info.append({
                                 "trip_id": trip_id,
@@ -193,7 +198,7 @@ def main():
         # Mostrar las omsas que no han llegado
         approaching_omsas = [bus for bus in bus_info if not bus["has_arrived"]]
         if approaching_omsas:
-            print("\nomsa en camino:")
+            print("\nomsas en camino:")
             for bus in approaching_omsas:
                 print(f"omsa{bus['trip_id']} -> {STOP_ID}: {format_distance(bus['distance'])}, ETA: {format_time(bus['duration'])}")
         
