@@ -15,10 +15,10 @@ BUCKET_NAME = "sigestur-tx.firebasestorage.app"
 STATIC_GTFS_FOLDER = "STATIC GTFS/"
 LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"), "OneDrive", "Escritorio","SIGESTUR", "STATIC GTFS")
 API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
-STOP_ID = "C19P34"  
+STOP_ID = "P10H01"  
 GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
 ARRIVAL_THRESHOLD = 20  
-DEPARTURE_TIMEOUT = 60  
+DEPARTURE_TIMEOUT = 45  
 
 # Inizializacion de los servicios CLOUD
 cred = credentials.Certificate(FIREBASE_CREDENTIALS)
@@ -200,7 +200,7 @@ def main():
         if approaching_omsas:
             print("\nomsas en camino:")
             for bus in approaching_omsas:
-                print(f"omsa{bus['trip_id']} -> {STOP_ID}: {format_distance(bus['distance'])}, ETA: {format_time(bus['duration'])}")
+                print(f"omsa {bus['trip_id']} -> {STOP_ID}: {format_distance(bus['distance'])}, ETA: {format_time(bus['duration'])}")
         
         # Muestrane las omsas que han llegado
         arrived_bus_info = [bus for bus in bus_info if bus["has_arrived"]]
@@ -214,7 +214,7 @@ def main():
         if not bus_info:
             print("No hay omsas en ruta hacia esta parada.")
             
-        time.sleep(15)
+        time.sleep(20) #Esperar 20 segundos para la proxinma actualizacion
 
 if __name__ == "__main__":
     main()
