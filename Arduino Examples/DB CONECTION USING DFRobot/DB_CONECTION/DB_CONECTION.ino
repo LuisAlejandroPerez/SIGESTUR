@@ -35,8 +35,8 @@ void setup() {
 }
 
 void loop() {
-  float latitude = 19.4326; // Data hardcodeada 
-  float longitude = -99.1332; // Data hardcodeada 
+  float latitude = 18.523033; // Data hardcodeada 
+  float longitude = -69.827545; // Data hardcodeada 
   
   postToFirebase(latitude, longitude);
   delay(30000); // Esperar 30s para postear DATA nuevamente
