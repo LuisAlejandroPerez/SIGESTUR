@@ -164,6 +164,7 @@ class IntegratedBusDisplay:
         self.eta_font = ('Courier New', 20, 'bold')
         self.time_font = ('Courier New', 18)
         self.header_font = ('Courier New', 24, 'bold')
+        self.date_font = ('Courier New', 16)
         
         # Colors
         self.random_colors = ['#FF5733', '#33FF57', '#3357FF', '#FF33A8', '#FFC300', '#8D33FF', '#33FFF0']
@@ -181,63 +182,89 @@ class IntegratedBusDisplay:
         self.update_loop()
 
     def setup_ui(self):
-        # Header
+        # Main container for header section
+        header_container = tk.Frame(self.root, bg='black')
+        header_container.pack(pady=(20, 5), fill='x')
+    
+        # Create a grid layout for the header section
+        header_container.grid_columnconfigure(0, weight=1)
+        header_container.grid_columnconfigure(1, weight=1)
+        header_container.grid_columnconfigure(2, weight=1)
+    
+        # Empty left column for balance
+        left_spacer = tk.Label(header_container, text="", bg='black')
+        left_spacer.grid(row=0, column=0, sticky='w', padx=40)
+    
+        # Center column with title and time - CENTERED IN THE ENTIRE WINDOW
+        center_frame = tk.Frame(header_container, bg='black')
+        center_frame.grid(row=0, column=1, sticky='')  # Remove any sticky positioning
+    
+        # Title - perfectly centered
         self.header = tk.Label(
-            self.root, 
-            text="OMSA ETA DISPLAY", 
-            font=self.header_font, 
-            bg='black', 
-            fg='white'
-        )
-        self.header.pack(pady=(20, 5))
-        
-        # Time display
+        center_frame, 
+        text=f"OMSA ETA - STOP {STOP_ID}", 
+        font=self.header_font, 
+        bg='black', 
+        fg='white'
+    )
+        self.header.pack(anchor='center')  # Explicitly center the title
+    
+        # Time display - centered under title
         self.time_label = tk.Label(
-            self.root, 
-            text="", 
-            font=self.time_font, 
-            bg='black', 
-            fg='#FFFF00'
-        )
-        self.time_label.pack(pady=(0, 10))
+        center_frame, 
+        text="", 
+        font=self.time_font, 
+        bg='black', 
+        fg='#FFFF00'
+    )
+        self.time_label.pack(anchor='center', pady=(5, 0))  # Explicitly center the time
+    
+        # Right column with date
+        self.date_label = tk.Label(
+        header_container, 
+        text="", 
+        font=self.date_font, 
+        bg='black', 
+        fg='#FFFF00'
+    )
+        self.date_label.grid(row=0, column=2, sticky='e', padx=40)
         
         # Separator
         self.separator = tk.Frame(self.root, height=3, bg='#555555')
-        self.separator.pack(fill='x', padx=40, pady=(0, 20))
+        self.separator.pack(fill='x', padx=40, pady=(20, 20))
         
         # Column headers
         header_frame = tk.Frame(self.root, bg='black')
         header_frame.pack()
+        
+        # Configure grid weights for proper column alignment
+        header_frame.grid_columnconfigure(0, weight=1)
+        header_frame.grid_columnconfigure(1, weight=1)
+        header_frame.grid_columnconfigure(2, weight=1)
         
         tk.Label(
             header_frame, 
             text="TRIP ID", 
             font=self.trip_font, 
             bg='black', 
-            fg='white', 
-            width=20, 
-            anchor='center'
-        ).grid(row=0, column=0, padx=20)
+            fg='white'
+        ).grid(row=0, column=0, padx=20, sticky='')
         
         tk.Label(
             header_frame, 
             text="ETA", 
             font=self.trip_font, 
             bg='black', 
-            fg='white', 
-            width=10, 
-            anchor='center'
-        ).grid(row=0, column=1, padx=20)
+            fg='white'
+        ).grid(row=0, column=1, padx=20, sticky='')
         
         tk.Label(
             header_frame, 
             text="DISTANCE", 
             font=self.trip_font, 
             bg='black', 
-            fg='white', 
-            width=15, 
-            anchor='center'
-        ).grid(row=0, column=2, padx=20)
+            fg='white'
+        ).grid(row=0, column=2, padx=20, sticky='')
         
         # Bus rows
         self.rows = []
@@ -245,17 +272,21 @@ class IntegratedBusDisplay:
             frame = tk.Frame(self.root, bg='black')
             frame.pack(pady=10)
             
-            # Trip ID container with colored background
-            trip_container = tk.Frame(frame, bg='black', padx=10, pady=5)
+            # Configure grid weights for proper column alignment
+            frame.grid_columnconfigure(0, weight=1)
+            frame.grid_columnconfigure(1, weight=1)
+            frame.grid_columnconfigure(2, weight=1)
+            
+            # Trip ID container with colored background (auto-sizing)
+            trip_container = tk.Frame(frame, bg='black', padx=15, pady=8)
             trip_container.grid(row=0, column=0, padx=20)
             
             trip_label = tk.Label(
                 trip_container, 
                 text="", 
                 font=self.trip_font, 
-                bg='black', 
-                width=18, 
-                anchor='center'
+                bg='black',
+                fg='white'
             )
             trip_label.pack()
             
@@ -265,9 +296,7 @@ class IntegratedBusDisplay:
                 text="", 
                 font=self.eta_font, 
                 bg='black', 
-                fg='#FFFF00', 
-                width=10, 
-                anchor='center'
+                fg='#FFFF00'
             )
             eta_label.grid(row=0, column=1, padx=20)
             
@@ -277,9 +306,7 @@ class IntegratedBusDisplay:
                 text="", 
                 font=self.eta_font, 
                 bg='black', 
-                fg='white', 
-                width=15, 
-                anchor='center'
+                fg='white'
             )
             distance_label.grid(row=0, column=2, padx=20)
             
@@ -327,6 +354,7 @@ class IntegratedBusDisplay:
                     
                     for trip_id in buses_to_remove:
                         # print(f"OMSA {trip_id} ha dejado la parada {STOP_ID}")
+                        
                         del arrived_buses[trip_id]
                     
                     # Process vehicle data
@@ -444,9 +472,13 @@ class IntegratedBusDisplay:
 
     def update_loop(self):
         """Main GUI update loop"""
-        # Update current time
-        now = datetime.now().strftime('%I:%M:%S %p')
-        self.time_label.config(text=now)
+        # Update current time and date
+        now = datetime.now()
+        current_time = now.strftime('%I:%M:%S %p')
+        current_date = now.strftime('%A, %B %d, %Y')
+        
+        self.time_label.config(text=current_time)
+        self.date_label.config(text=current_date)
         
         # Get latest ETA data from backend
         eta_data = self.get_eta_data()
@@ -488,7 +520,7 @@ class IntegratedBusDisplay:
                 
             else:
                 # Clear row if no data
-                self.rows[i]['trip_label'].config(text="", bg='black')
+                self.rows[i]['trip_label'].config(text="", bg='black', fg='white')
                 self.rows[i]['trip_container'].config(bg='black')
                 self.rows[i]['eta'].config(text="")
                 self.rows[i]['distance'].config(text="")
