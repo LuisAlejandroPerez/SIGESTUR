@@ -9,15 +9,15 @@ from google.cloud import storage
 from google.transit import gtfs_realtime_pb2
 from datetime import datetime, timedelta
 
-FIREBASE_CREDENTIALS = r"C:\Users\luisa\OneDrive\Escritorio\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-5ccc8db2dc.json"
+FIREBASE_CREDENTIALS = r"C:\Users\luisa\Desktop\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-fdbe3bdb4a.json"
 DATABASE_URL = "https://sigestur-tx-default-rtdb.firebaseio.com/"
 BUCKET_NAME = "sigestur-tx.firebasestorage.app"
 STATIC_GTFS_FOLDER = "STATIC GTFS/"
-LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"), "OneDrive", "Escritorio", "SIGESTUR", "STATIC GTFS")
+LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"),  "Desktop", "SIGESTUR", "STATIC GTFS")
 API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
 STOP_ID = "C19P34"
 DIRECTION_ID = "0"  # Cambiar a 0 o 1 dependiendo la direccion de la parada
-GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
+GTFS_RT_PATH = "C:/Users/luisa/Desktop/SIGESTUR/GTFS RT/vehicle_positions.pb"
 ARRIVAL_THRESHOLD = 20
 DEPARTURE_TIMEOUT = 45
 
@@ -165,7 +165,8 @@ def main():
             trip_id = vehicle.trip.trip_id
             lat, lon = vehicle.position.latitude, vehicle.position.longitude
 
-            if trip_id in trips_for_raspberry:
+            vehicle_data = db.reference(f"gps_data/trip_ID/{trip_id}").get()
+            if vehicle_data and str(vehicle_data.get("direction_id")) == DIRECTION_ID and trip_id in trips_for_raspberry:
                 result = request_eta(lat, lon, stop_lat, stop_lon)
                 if result:
                     for res in result:
