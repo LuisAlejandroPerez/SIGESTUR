@@ -185,48 +185,40 @@ class IntegratedBusDisplay:
         # Main container for header section
         header_container = tk.Frame(self.root, bg='black')
         header_container.pack(pady=(20, 5), fill='x')
-    
+        
         # Create a grid layout for the header section
         header_container.grid_columnconfigure(0, weight=1)
         header_container.grid_columnconfigure(1, weight=1)
         header_container.grid_columnconfigure(2, weight=1)
-    
-        # Empty left column for balance
-        left_spacer = tk.Label(header_container, text="", bg='black')
-        left_spacer.grid(row=0, column=0, sticky='w', padx=40)
-    
-        # Center column with title and time - CENTERED IN THE ENTIRE WINDOW
-        center_frame = tk.Frame(header_container, bg='black')
-        center_frame.grid(row=0, column=1, sticky='')  # Remove any sticky positioning
-    
-        # Title - perfectly centered
-        self.header = tk.Label(
-        center_frame, 
-        text=f"OMSA ETA - STOP {STOP_ID}", 
-        font=self.header_font, 
-        bg='black', 
-        fg='white'
-    )
-        self.header.pack(anchor='center')  # Explicitly center the title
-    
-        # Time display - centered under title
+        
+        # Left column with time
         self.time_label = tk.Label(
-        center_frame, 
-        text="", 
-        font=self.time_font, 
-        bg='black', 
-        fg='#FFFF00'
-    )
-        self.time_label.pack(anchor='center', pady=(5, 0))  # Explicitly center the time
-    
+            header_container, 
+            text="", 
+            font=self.time_font, 
+            bg='black', 
+            fg='#FFFF00'
+        )
+        self.time_label.grid(row=0, column=0, sticky='w', padx=40)
+        
+        # Center column with title - CENTERED IN THE ENTIRE WINDOW
+        self.header = tk.Label(
+            header_container, 
+            text=f"OMSA ETA - STOP {STOP_ID}", 
+            font=self.header_font, 
+            bg='black', 
+            fg='white'
+        )
+        self.header.grid(row=0, column=1)
+        
         # Right column with date
         self.date_label = tk.Label(
-        header_container, 
-        text="", 
-        font=self.date_font, 
-        bg='black', 
-        fg='#FFFF00'
-    )
+            header_container, 
+            text="", 
+            font=self.date_font, 
+            bg='black', 
+            fg='#FFFF00'
+        )
         self.date_label.grid(row=0, column=2, sticky='e', padx=40)
         
         # Separator
@@ -354,7 +346,6 @@ class IntegratedBusDisplay:
                     
                     for trip_id in buses_to_remove:
                         # print(f"OMSA {trip_id} ha dejado la parada {STOP_ID}")
-                        
                         del arrived_buses[trip_id]
                     
                     # Process vehicle data
