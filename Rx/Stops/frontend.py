@@ -73,7 +73,7 @@ class BusDisplayGUI:
         # Center column with title - CENTERED IN THE ENTIRE WINDOW
         self.header = tk.Label(
             header_container, 
-            text=f"OMSA ETA - STOP {self.backend.STOP_ID}",
+            text=f"Av. Lincoln - Agora Mall {self.backend.STOP_ID}",
             font=self.header_font,
             bg='black',
             fg='white'
@@ -180,7 +180,7 @@ class BusDisplayGUI:
     
     def format_eta(self, minutes):
         """Format ETA display"""
-        return "ARRIVING" if minutes <= 1 else f"{minutes} MIN"
+        return "LLEGANDO" if minutes <= 1 else f"{minutes} MIN"
     
     def format_distance(self, meters):
         """Format distance display"""
