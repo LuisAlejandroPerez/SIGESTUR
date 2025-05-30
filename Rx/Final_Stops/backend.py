@@ -249,7 +249,7 @@ class BackendWorker:
                             'trip_id': bus['trip_id'],
                             'eta': bus['duration'] // 60,  # Convert to minutes
                             'distance': bus['distance'],
-                            'status': 'APPROACHING',
+                            'status': 'De camino',
                             'status_color': '#FFFF00'
                         })
                     

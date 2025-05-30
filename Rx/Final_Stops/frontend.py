@@ -75,7 +75,7 @@ class TerminalBusDisplay:
         # Center column with title - CENTERED IN THE ENTIRE WINDOW
         self.header = tk.Label(
             header_container, 
-            text=f"OMSA TERMINAL - STOP {STOP_ID}",
+            text=f"Av. Lincoln - Agora Mall {STOP_ID}",
             font=self.header_font,
             bg='black',
             fg='white'
@@ -108,7 +108,7 @@ class TerminalBusDisplay:
         
         tk.Label(
             header_frame, 
-            text="TRIP ID",
+            text="OMSA",
             font=self.trip_font,
             bg='black',
             fg='white'
@@ -124,7 +124,7 @@ class TerminalBusDisplay:
         
         tk.Label(
             header_frame, 
-            text="DISTANCE",
+            text="Distancia",
             font=self.trip_font,
             bg='black',
             fg='white'
@@ -219,8 +219,8 @@ class TerminalBusDisplay:
     def format_eta(self, minutes):
         """Format ETA display"""
         if minutes == 0:
-            return "AT TERMINAL"
-        return "ARRIVING" if minutes <= 1 else f"{minutes} MIN"
+            return "En la Parada"
+        return "Llegando" if minutes <= 1 else f"{minutes} MIN"
 
     def format_distance(self, meters):
         """Format distance display"""
