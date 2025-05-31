@@ -14,17 +14,18 @@ import queue
 class BusETABackend:
     def __init__(self):
         # Configuration
-        self.FIREBASE_CREDENTIALS = r"C:\Users\luisa\OneDrive\Escritorio\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-868cffd586.json"
+        self.FIREBASE_CREDENTIALS = r"/home/receptor/Desktop/SIGESTUR/Rx/sigestur-tx-firebase-adminsdk-fbsvc-21dbc3b0e0.json"
         self.DATABASE_URL = "https://sigestur-tx-default-rtdb.firebaseio.com/"
         self.BUCKET_NAME = "sigestur-tx.firebasestorage.app"
         self.STATIC_GTFS_FOLDER = "STATIC GTFS/"
-        self.LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"),"OneDrive","Escritorio", "SIGESTUR", "STATIC GTFS")
+        self.LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"),"home","receptor", "Desktop", "SIGESTUR", "STATIC GTFS")
         self.API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
         self.STOP_ID = "C19P34"
         self.DIRECTION_ID = "0"
-        self.GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
+        self.GTFS_RT_PATH = "/home/receptor/Desktop/SIGESTUR/vehicle_positions.pb"
         self.ARRIVAL_THRESHOLD = 20
         self.DEPARTURE_TIMEOUT = 45
+
         
         # Initialize Firebase
         self.init_firebase()

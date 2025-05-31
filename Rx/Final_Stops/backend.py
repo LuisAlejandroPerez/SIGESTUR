@@ -12,18 +12,18 @@ import threading
 import queue
 
 # Configuration
-FIREBASE_CREDENTIALS = r"C:\Users\luisa\Desktop\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-a49d945ba1.json"
+FIREBASE_CREDENTIALS = r"/home/receptor/Desktop/SIGESTUR/Rx/sigestur-tx-firebase-adminsdk-fbsvc-21dbc3b0e0.json"
 DATABASE_URL = "https://sigestur-tx-default-rtdb.firebaseio.com/"
 BUCKET_NAME = "sigestur-tx.firebasestorage.app"
 STATIC_GTFS_FOLDER = "STATIC GTFS/"
-LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"), "Desktop", "SIGESTUR", "STATIC GTFS")
+LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"),"home","receptor", "Desktop", "SIGESTUR", "STATIC GTFS")
 API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
 
 # Terminal stop configuration
 STOP_ID = "C19P34"  # Change this to your terminal stop ID
 DIRECTION_ID = "0"  # Current direction buses are arriving from
 NEW_DIRECTION_ID = "1"  # Direction buses will change to after turnaround
-GTFS_RT_PATH = "C:/Users/luisa/Desktop/SIGESTUR/GTFS RT/vehicle_positions.pb"
+GTFS_RT_PATH = "/home/receptor/Desktop/SIGESTUR/vehicle_positions.pb"
 
 # Thresholds
 ARRIVAL_THRESHOLD = 20  # meters
