@@ -8,8 +8,7 @@ loginButton.addEventListener('click', (e) => {
   const password = loginForm.password.value;
 
   if (username === 'user' && password === 'web_dev') {
-    alert('You have successfully logged in.');
-    location.reload();
+    window.location.href = 'pages/dashboard.html';
   } else {
     loginErrorMsg.style.display = 'block';
   }
