@@ -1,4 +1,11 @@
-// Firebase config
+// Importaciones
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+// Firebase Config
 const firebaseConfig = {
   apiKey: 'AIzaSyC7rGR0OTIRZ_QQc3RGZ1HB88FhqudyFV0',
   authDomain: 'sigestur-tx.firebaseapp.com',
@@ -9,26 +16,27 @@ const firebaseConfig = {
   appId: '1:53209086687:web:7f55fbc6325b99346b076a',
 };
 
-// Inizializacion de Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+// Inicializar Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
 const loginForm = document.getElementById('login-form');
 const loginErrorMsg = document.getElementById('login-error-msg');
 
 loginForm.addEventListener('submit', (e) => {
   e.preventDefault();
+
   const email = loginForm.username.value;
   const password = loginForm.password.value;
 
-  auth
-    .signInWithEmailAndPassword(email, password)
+  // Iniciar sesion con Firebase
+  signInWithEmailAndPassword(auth, email, password)
     .then((userCredential) => {
-      // Login exitoso
-      window.location.href = 'pages/dashboard.html';
+      console.log('Inicio de sesion exitoso:', userCredential.user);
+      window.location.href = 'pages/dashboard.html'; // Redirige al dashboard
     })
     .catch((error) => {
-      console.error(error.code, error.message);
+      console.error('Error de inicio de sesion:', error.message);
       loginErrorMsg.style.opacity = 1;
     });
 });
