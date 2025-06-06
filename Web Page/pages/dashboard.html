@@ -3,11 +3,109 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>SIGESTUR - Centro de Monitoreo</title>
+    <link rel="stylesheet" href="../Styles/dashboard.css" />
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
   </head>
   <body>
-    <h1>!!! Hello World !!!</h1>
-    <p>Estás autenticado como: <strong id="user-email"></strong></p>
+    <!-- Header -->
+    <header class="dashboard-header">
+      <div class="header-left">
+        <img
+          src="../img/logoOMSA-SVG.svg"
+          alt="OMSA Logo"
+          class="header-logo"
+        />
+        <h1>SIGESTUR - Centro de Monitoreo</h1>
+      </div>
+      <div class="header-right">
+        <span class="user-info">
+          <strong id="user-email"></strong>
+        </span>
+        <button id="logout-btn" class="logout-btn">Cerrar Sesión</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <h3>Estado del Sistema</h3>
+          <div class="status-cards">
+            <div class="status-card">
+              <div class="status-number" id="total-buses">0</div>
+              <div class="status-label">Buses Activos</div>
+            </div>
+            <div class="status-card alert">
+              <div class="status-number" id="broken-buses">0</div>
+              <div class="status-label">Buses Averiados</div>
+            </div>
+            <div class="status-card">
+              <div class="status-number" id="total-stops">0</div>
+              <div class="status-label">Paradas</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <h3>Alertas</h3>
+          <div id="alerts-container" class="alerts-container">
+            <!-- Alerts will be populated here -->
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <h3>Buses en Línea</h3>
+          <div id="buses-list" class="buses-list">
+            <!-- Bus list will be populated here -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- Map Container -->
+      <div class="map-container">
+        <div id="map"></div>
+        <div class="map-controls">
+          <button id="refresh-btn" class="control-btn">🔄 Actualizar</button>
+          <button id="center-map-btn" class="control-btn">
+            📍 Centrar Mapa
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bus Info Modal -->
+    <div id="bus-modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Información del Bus</h2>
+        <div id="bus-info-content">
+          <!-- Bus information will be populated here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
     <script type="module" src="../assets/auth-guard.js"></script>
+    <script type="module" src="../assets/dashboard.js"></script>
+    <!-- Replace the Google Maps script tag with this one -->
+    <script>
+      function initMap() {
+        // This will be called by the Google Maps API
+        if (window.dashboardInitMap) {
+          window.dashboardInitMap();
+        }
+      }
+    </script>
+    <script
+      async
+      defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw&callback=initMap&libraries=geometry&loading=async"
+    ></script>
   </body>
 </html>
