@@ -12,21 +12,21 @@ import threading
 import queue
 
 # Configuration
-FIREBASE_CREDENTIALS = r"/home/receptor/Desktop/SIGESTUR/Rx/sigestur-tx-firebase-adminsdk-fbsvc-21dbc3b0e0.json"
+FIREBASE_CREDENTIALS = r"C:\Users\luisa\OneDrive\Escritorio\SIGESTUR\Rx\sigestur-tx-firebase-adminsdk-fbsvc-3e9fbb7cd9.json"
 DATABASE_URL = "https://sigestur-tx-default-rtdb.firebaseio.com/"
 BUCKET_NAME = "sigestur-tx.firebasestorage.app"
 STATIC_GTFS_FOLDER = "STATIC GTFS/"
-LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"),"home","receptor", "Desktop", "SIGESTUR", "STATIC GTFS")
+LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"),"OneDrive","Escritorio",  "SIGESTUR", "STATIC GTFS")
 API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
 
 # Terminal stop configuration
 STOP_ID = "C19P34"  # Change this to your terminal stop ID
 DIRECTION_ID = "0"  # Current direction buses are arriving from
 NEW_DIRECTION_ID = "1"  # Direction buses will change to after turnaround
-GTFS_RT_PATH = "/home/receptor/Desktop/SIGESTUR/vehicle_positions.pb"
+GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
 
 # Thresholds
-ARRIVAL_THRESHOLD = 20  # meters
+ARRIVAL_THRESHOLD = 50 # meters
 DEPARTURE_TIMEOUT = 45  # seconds before considering bus has left
 DIRECTION_CHANGE_TIMEOUT = 40  # seconds at stop before changing direction
 
@@ -278,10 +278,10 @@ class BackendWorker:
                     except queue.Full:
                         pass  # Skip if queue is full
                     
-                    time.sleep(20)
+                    time.sleep(3)
                 
                 except Exception as e:
-                    time.sleep(10)  # Wait before retrying
+                    time.sleep(3)  # Wait before retrying
         
         except Exception as e:
             self.running = False
