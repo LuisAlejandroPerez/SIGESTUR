@@ -23,8 +23,8 @@ class BusETABackend:
         self.STOP_ID = "C19P11" # Cambiar en funcion de la parada
         self.DIRECTION_ID = "1" # Cambiar en funcion de si esta parada esta bajando o subiendo la avenida
         self.GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
-        self.ARRIVAL_THRESHOLD = 50
-        self.DEPARTURE_TIMEOUT = 45
+        self.ARRIVAL_THRESHOLD = 35
+        self.DEPARTURE_TIMEOUT = 25
 
         
         # Initialize Firebase

@@ -70,7 +70,7 @@ class BusDisplayGUI:
         )
         self.time_label.grid(row=0, column=0, sticky='w', padx=40)
         
-        # Center column with title - CENTERED IN THE ENTIRE WINDOW
+        # Center column with title
         self.header = tk.Label(
             header_container, 
             text=f"Av. Lincoln - Agora Mall {self.backend.STOP_ID}",
@@ -94,14 +94,14 @@ class BusDisplayGUI:
         self.separator = tk.Frame(self.root, height=3, bg='#555555')
         self.separator.pack(fill='x', padx=40, pady=(20, 20))
         
-        # Column headers
+        # Column headers - use a frame with fixed column widths
         header_frame = tk.Frame(self.root, bg='black')
         header_frame.pack()
         
-        # Configure grid weights for proper column alignment
-        header_frame.grid_columnconfigure(0, weight=1)
-        header_frame.grid_columnconfigure(1, weight=1)
-        header_frame.grid_columnconfigure(2, weight=1)
+        # Set fixed column widths for alignment
+        header_frame.columnconfigure(0, minsize=250)  # Trip ID column
+        header_frame.columnconfigure(1, minsize=250)  # ETA column
+        header_frame.columnconfigure(2, minsize=250)  # Distance column
         
         tk.Label(
             header_frame, 
@@ -109,7 +109,7 @@ class BusDisplayGUI:
             font=self.trip_font,
             bg='black',
             fg='white'
-        ).grid(row=0, column=0, padx=20, sticky='')
+        ).grid(row=0, column=0, padx=10, sticky='w')
         
         tk.Label(
             header_frame, 
@@ -117,7 +117,7 @@ class BusDisplayGUI:
             font=self.trip_font,
             bg='black',
             fg='white'
-        ).grid(row=0, column=1, padx=20, sticky='')
+        ).grid(row=0, column=1, padx=10, sticky='w')
         
         tk.Label(
             header_frame, 
@@ -125,31 +125,30 @@ class BusDisplayGUI:
             font=self.trip_font,
             bg='black',
             fg='white'
-        ).grid(row=0, column=2, padx=20, sticky='')
+        ).grid(row=0, column=2, padx=10, sticky='w')
         
-        # Bus rows
+        # Bus rows with fixed column widths
         self.rows = []
         for _ in range(2):
             frame = tk.Frame(self.root, bg='black')
             frame.pack(pady=10)
             
-            # Configure grid weights for proper column alignment
-            frame.grid_columnconfigure(0, weight=1)
-            frame.grid_columnconfigure(1, weight=1)
-            frame.grid_columnconfigure(2, weight=1)
+            # Set fixed column widths matching the header
+            frame.columnconfigure(0, minsize=250)
+            frame.columnconfigure(1, minsize=250)
+            frame.columnconfigure(2, minsize=250)
             
-            # Trip ID container with colored background (auto-sizing)
-            trip_container = tk.Frame(frame, bg='black', padx=15, pady=8)
-            trip_container.grid(row=0, column=0, padx=20)
-            
+            # Trip ID label (without container frame)
             trip_label = tk.Label(
-                trip_container, 
+                frame, 
                 text="",
                 font=self.trip_font,
                 bg='black',
-                fg='white'
+                fg='white',
+                anchor='w',
+                padx=15
             )
-            trip_label.pack()
+            trip_label.grid(row=0, column=0, sticky='w', padx=10)
             
             # ETA label
             eta_label = tk.Label(
@@ -157,9 +156,11 @@ class BusDisplayGUI:
                 text="",
                 font=self.eta_font,
                 bg='black',
-                fg='#FFFF00'
+                fg='#FFFF00',
+                anchor='w',
+                padx=10
             )
-            eta_label.grid(row=0, column=1, padx=20)
+            eta_label.grid(row=0, column=1, sticky='w', padx=10)
             
             # Distance label
             distance_label = tk.Label(
@@ -167,13 +168,14 @@ class BusDisplayGUI:
                 text="",
                 font=self.eta_font,
                 bg='black',
-                fg='white'
+                fg='white',
+                anchor='w',
+                padx=10
             )
-            distance_label.grid(row=0, column=2, padx=20)
+            distance_label.grid(row=0, column=2, sticky='w', padx=10)
             
             self.rows.append({
                 'trip_label': trip_label,
-                'trip_container': trip_container,
                 'eta': eta_label,
                 'distance': distance_label
             })
@@ -194,7 +196,6 @@ class BusDisplayGUI:
         text_color = 'white' if self.is_color_dark(new_hex) else 'black'
         
         self.rows[i]['trip_label'].config(bg=new_hex, fg=text_color)
-        self.rows[i]['trip_container'].config(bg=new_hex)
         
         if step < total_steps:
             self.root.after(30, self.fade_color, i, start_rgb, end_rgb, step + 1, total_steps)
@@ -260,7 +261,6 @@ class BusDisplayGUI:
             else:
                 # Clear row if no data
                 self.rows[i]['trip_label'].config(text="", bg='black', fg='white')
-                self.rows[i]['trip_container'].config(bg='black')
                 self.rows[i]['eta'].config(text="")
                 self.rows[i]['distance'].config(text="")
                 self.current_trip_ids[i] = None
