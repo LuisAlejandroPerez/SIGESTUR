@@ -20,8 +20,8 @@ class BusETABackend:
         self.STATIC_GTFS_FOLDER = "STATIC GTFS/"
         self.LOCAL_GTFS_PATH = os.path.join(os.path.expanduser("~"),"OneDrive","Escritorio",  "SIGESTUR", "STATIC GTFS")
         self.API_KEY = "AIzaSyCIsmfqnTiBsxw9C2pyIhdibHJcryJMCHw"
-        self.STOP_ID = "C19P34"
-        self.DIRECTION_ID = "0"
+        self.STOP_ID = "C19P11" # Cambiar en funcion de la parada
+        self.DIRECTION_ID = "1" # Cambiar en funcion de si esta parada esta bajando o subiendo la avenida
         self.GTFS_RT_PATH = "C:/Users/luisa/OneDrive/Escritorio/SIGESTUR/GTFS RT/vehicle_positions.pb"
         self.ARRIVAL_THRESHOLD = 50
         self.DEPARTURE_TIMEOUT = 45
@@ -158,8 +158,14 @@ class BusETABackend:
                 return
             
             stop_lat, stop_lon = stops[self.STOP_ID]
-            trips_to_stops = self.load_trips(f"{self.LOCAL_GTFS_PATH}/stop_times.txt", f"{self.LOCAL_GTFS_PATH}/trips.txt")
-            trips_for_raspberry = [trip for trip, stops in trips_to_stops.items() if self.STOP_ID in stops]
+            # Cargar todos los trips asociados a la parada
+            with open(f"{self.LOCAL_GTFS_PATH}/stop_times.txt", newline="", encoding="utf-8") as csvfile:
+                reader = csv.DictReader(csvfile)
+                trips_for_raspberry = set()
+                for row in reader:
+                    if row["stop_id"] == self.STOP_ID:
+                        trips_for_raspberry.add(row["trip_id"])
+
             
             self.backend_running = True
             
