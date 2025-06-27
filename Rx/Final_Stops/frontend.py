@@ -72,7 +72,7 @@ class TerminalBusDisplay:
         )
         self.time_label.grid(row=0, column=0, sticky='w', padx=40)
         
-        # Center column with title - CENTERED IN THE ENTIRE WINDOW
+        # Center column with title
         self.header = tk.Label(
             header_container, 
             text=f"Av. Lincoln - Agora Mall {STOP_ID}",
@@ -100,68 +100,75 @@ class TerminalBusDisplay:
         header_frame = tk.Frame(self.root, bg='black')
         header_frame.pack()
         
-        # Configure grid weights for proper column alignment
-        header_frame.grid_columnconfigure(0, weight=1)
-        header_frame.grid_columnconfigure(1, weight=1)
-        header_frame.grid_columnconfigure(2, weight=1)
-        header_frame.grid_columnconfigure(3, weight=1)
+        # Configure fixed column widths for alignment
+        header_frame.columnconfigure(0, minsize=200)  # OMSA
+        header_frame.columnconfigure(1, minsize=150)  # ETA
+        header_frame.columnconfigure(2, minsize=150)  # Distancia
+        header_frame.columnconfigure(3, minsize=200)  # STATUS
         
         tk.Label(
             header_frame, 
             text="OMSA",
             font=self.trip_font,
             bg='black',
-            fg='white'
-        ).grid(row=0, column=0, padx=15, sticky='')
+            fg='white',
+            anchor='w',
+            padx=15
+        ).grid(row=0, column=0, sticky='w')
         
         tk.Label(
             header_frame, 
             text="ETA",
             font=self.trip_font,
             bg='black',
-            fg='white'
-        ).grid(row=0, column=1, padx=15, sticky='')
+            fg='white',
+            anchor='w',
+            padx=15
+        ).grid(row=0, column=1, sticky='w')
         
         tk.Label(
             header_frame, 
             text="Distancia",
             font=self.trip_font,
             bg='black',
-            fg='white'
-        ).grid(row=0, column=2, padx=15, sticky='')
+            fg='white',
+            anchor='w',
+            padx=15
+        ).grid(row=0, column=2, sticky='w')
         
         tk.Label(
             header_frame, 
             text="STATUS",
             font=self.trip_font,
             bg='black',
-            fg='white'
-        ).grid(row=0, column=3, padx=15, sticky='')
+            fg='white',
+            anchor='w',
+            padx=15
+        ).grid(row=0, column=3, sticky='w')
         
         # Bus rows (3 rows for terminal display)
         self.rows = []
         for _ in range(3):
             frame = tk.Frame(self.root, bg='black')
-            frame.pack(pady=10)
+            frame.pack(pady=(5, 10))  # Adjusted vertical padding
             
-            # Configure grid weights for proper column alignment
-            frame.grid_columnconfigure(0, weight=1)
-            frame.grid_columnconfigure(1, weight=1)
-            frame.grid_columnconfigure(2, weight=1)
-            frame.grid_columnconfigure(3, weight=1)
+            # Configure fixed column widths matching the headers
+            frame.columnconfigure(0, minsize=200)  # OMSA
+            frame.columnconfigure(1, minsize=150)  # ETA
+            frame.columnconfigure(2, minsize=150)  # Distancia
+            frame.columnconfigure(3, minsize=200)  # STATUS
             
-            # Trip ID container with colored background (auto-sizing)
-            trip_container = tk.Frame(frame, bg='black', padx=15, pady=8)
-            trip_container.grid(row=0, column=0, padx=15)
-            
+            # Trip ID label
             trip_label = tk.Label(
-                trip_container, 
+                frame, 
                 text="",
                 font=self.trip_font,
                 bg='black',
-                fg='white'
+                fg='white',
+                anchor='w',
+                padx=15
             )
-            trip_label.pack()
+            trip_label.grid(row=0, column=0, sticky='w')
             
             # ETA label
             eta_label = tk.Label(
@@ -169,9 +176,11 @@ class TerminalBusDisplay:
                 text="",
                 font=self.eta_font,
                 bg='black',
-                fg='#FFFF00'
+                fg='#FFFF00',
+                anchor='w',
+                padx=15
             )
-            eta_label.grid(row=0, column=1, padx=15)
+            eta_label.grid(row=0, column=1, sticky='w')
             
             # Distance label
             distance_label = tk.Label(
@@ -179,9 +188,11 @@ class TerminalBusDisplay:
                 text="",
                 font=self.eta_font,
                 bg='black',
-                fg='white'
+                fg='white',
+                anchor='w',
+                padx=15
             )
-            distance_label.grid(row=0, column=2, padx=15)
+            distance_label.grid(row=0, column=2, sticky='w')
             
             # Status label
             status_label = tk.Label(
@@ -189,13 +200,14 @@ class TerminalBusDisplay:
                 text="",
                 font=self.status_font,
                 bg='black',
-                fg='white'
+                fg='white',
+                anchor='w',
+                padx=15
             )
-            status_label.grid(row=0, column=3, padx=15)
+            status_label.grid(row=0, column=3, sticky='w')
             
             self.rows.append({
                 'trip_label': trip_label,
-                'trip_container': trip_container,
                 'eta': eta_label,
                 'distance': distance_label,
                 'status': status_label
@@ -234,7 +246,6 @@ class TerminalBusDisplay:
         text_color = 'white' if is_color_dark(new_hex) else 'black'
         
         self.rows[i]['trip_label'].config(bg=new_hex, fg=text_color)
-        self.rows[i]['trip_container'].config(bg=new_hex)
         
         if step < total_steps:
             self.root.after(30, self.fade_color, i, start_rgb, end_rgb, step + 1, total_steps)
@@ -298,7 +309,6 @@ class TerminalBusDisplay:
             else:
                 # Clear row if no data
                 self.rows[i]['trip_label'].config(text="", bg='black', fg='white')
-                self.rows[i]['trip_container'].config(bg='black')
                 self.rows[i]['eta'].config(text="")
                 self.rows[i]['distance'].config(text="")
                 self.rows[i]['status'].config(text="")
