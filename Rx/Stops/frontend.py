@@ -220,7 +220,9 @@ class BusDisplayGUI:
         for i in range(2):
             if i < len(self.buses):
                 trip_id = self.buses[i]['trip_id']
-                
+                distance = self.buses[i]['distance']
+                has_arrived = self.buses[i].get('has_arrived', False)
+
                 # Check if this is a new trip (for color animation)
                 if trip_id != self.current_trip_ids[i]:
                     new_color = random.choice(self.random_colors)
@@ -234,17 +236,22 @@ class BusDisplayGUI:
                 # Update trip ID
                 self.rows[i]['trip_label'].config(text=trip_id)
                 
-                # Update ETA with color coding
-                eta = self.buses[i]['eta']
-                self.rows[i]['eta'].config(text=self.format_eta(eta))
+                # Update ETA with arrival message when within 50 meters
+                if distance <= 50 or has_arrived:
+                    self.rows[i]['eta'].config(text="¡LLEGANDO!", fg='red')
                 
-                # Color code ETA based on urgency
-                if eta <= 1:
-                    self.rows[i]['eta'].config(fg='red')
-                elif eta <= 5:
-                    self.rows[i]['eta'].config(fg='orange')
                 else:
-                    self.rows[i]['eta'].config(fg='#FFFF00')
+                    # Update ETA with color coding
+                    eta = self.buses[i]['eta']
+                    self.rows[i]['eta'].config(text=self.format_eta(eta))
+                
+                    # Color code ETA based on urgency
+                    if eta <= 1:
+                        self.rows[i]['eta'].config(fg='red')
+                    elif eta <= 5:
+                        self.rows[i]['eta'].config(fg='orange')
+                    else:
+                        self.rows[i]['eta'].config(fg='#FFFF00')
                 
                 # Update distance
                 distance = self.buses[i]['distance']
@@ -260,7 +267,7 @@ class BusDisplayGUI:
                 self.trip_colors[i] = None
         
         # Schedule next update
-        self.root.after(5000, self.update_loop)  # Update every 5 seconds
+        self.root.after(3000, self.update_loop)  # Update every 3 seconds
     
     def on_closing(self):
         """Handle application closing"""
