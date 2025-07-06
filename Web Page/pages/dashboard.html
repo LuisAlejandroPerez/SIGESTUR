@@ -4,7 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SIGESTUR - Centro de Monitoreo</title>
+    <meta
+      name="description"
+      content="Dashboard de monitoreo en tiempo real de autobuses OMSA en Santo Domingo"
+    />
     <link rel="stylesheet" href="../Styles/dashboard.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -24,7 +35,7 @@
       </div>
       <div class="header-right">
         <span class="user-info">
-          <strong id="user-email"></strong>
+          <strong id="user-email">Cargando...</strong>
         </span>
         <button id="logout-btn" class="logout-btn">Cerrar Sesión</button>
       </div>
@@ -35,17 +46,20 @@
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-section">
-          <h3>Estado del Sistema</h3>
+          <h3>📊 Estado del Sistema</h3>
           <div class="status-cards">
-            <div class="status-card">
+            <div class="status-card" title="Autobuses activos en tiempo real">
               <div class="status-number" id="total-buses">0</div>
               <div class="status-label">OMSAS Activas</div>
             </div>
-            <div class="status-card alert">
+            <div
+              class="status-card alert"
+              title="Autobuses que requieren atención"
+            >
               <div class="status-number" id="broken-buses">0</div>
               <div class="status-label">OMSAS Averiadas</div>
             </div>
-            <div class="status-card">
+            <div class="status-card" title="Total de paradas registradas">
               <div class="status-number" id="total-stops">0</div>
               <div class="status-label">Paradas</div>
             </div>
@@ -53,16 +67,20 @@
         </div>
 
         <div class="sidebar-section">
-          <h3>Alertas</h3>
+          <h3>🚨 Alertas</h3>
           <div id="alerts-container" class="alerts-container">
-            <!-- Alerts will be populated here -->
+            <p style="color: #48bb78; text-align: center; padding: 1rem">
+              Cargando alertas...
+            </p>
           </div>
         </div>
 
         <div class="sidebar-section">
-          <h3>OMSAS en Linea</h3>
+          <h3>🚌 OMSAS en Línea</h3>
           <div id="buses-list" class="buses-list">
-            <!-- Bus list will be populated here -->
+            <p style="color: #718096; text-align: center; padding: 1rem">
+              Cargando autobuses...
+            </p>
           </div>
         </div>
       </aside>
@@ -71,8 +89,14 @@
       <div class="map-container">
         <div id="map"></div>
         <div class="map-controls">
-          <button id="refresh-btn" class="control-btn">🔄 Actualizar</button>
-          <button id="center-map-btn" class="control-btn">
+          <button id="refresh-btn" class="control-btn" title="Actualizar datos">
+            🔄 Actualizar
+          </button>
+          <button
+            id="center-map-btn"
+            class="control-btn"
+            title="Centrar mapa en Santo Domingo"
+          >
             📍 Centrar Mapa
           </button>
         </div>
@@ -80,10 +104,16 @@
     </main>
 
     <!-- Bus Info Modal -->
-    <div id="bus-modal" class="modal">
+    <div
+      id="bus-modal"
+      class="modal"
+      role="dialog"
+      aria-labelledby="modal-title"
+      aria-hidden="true"
+    >
       <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>Informacion De la OMSA</h2>
+        <span class="close" aria-label="Cerrar modal">&times;</span>
+        <h2 id="modal-title">🚌 Información de la OMSA</h2>
         <div id="bus-info-content">
           <!-- Bus information will be populated here -->
         </div>
