@@ -81,8 +81,9 @@ const driverInfo = {
 };
 
 // FontAwesome Bus Icons (SVG)
-const busIconSVG = (color = '#4CAF50') => `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="32" height="32">
+const busIconSVG = (
+  color = '#4CAF50'
+) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="32" height="32">
   <path fill="${color}" d="M224 0C348.8 0 448 35.2 448 80l0 16 0 320c0 17.7-14.3 32-32 32l0 32c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32l0-32-192 0 0 32c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32L0 96 0 80C0 35.2 99.2 0 224 0zM64 128l0 128c0 17.7 14.3 32 32 32l256 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32L96 96c-17.7 0-32 14.3-32 32zM80 400a32 32 0 1 0 0-64 32 32 0 1 0 0 64zm288 0a32 32 0 1 0 0-64 32 32 0 1 0 0 64z"/>
 </svg>`;
 
@@ -172,10 +173,8 @@ function handleLogout() {
 async function initializeApplication() {
   try {
     console.log('Initializing SIGESTUR Dashboard...');
-
     // Start listening to real-time bus data FIRST (this is the priority)
     startRealtimeDataListener();
-
     // Load GTFS data in background (non-blocking)
     loadGTFSData().catch((error) => {
       console.warn('GTFS loading failed, continuing with mock data:', error);
@@ -189,7 +188,6 @@ async function initializeApplication() {
 // Google Maps initialization (called by Google Maps API)
 window.dashboardInitMap = () => {
   console.log('Initializing Google Maps...');
-
   const mapElement = document.getElementById('map');
   if (!mapElement) {
     console.error('Map element not found');
@@ -264,6 +262,7 @@ async function loadGTFSData() {
       routes: [],
       trips: [],
     };
+
     updateStopsCounter();
 
     // Define the GTFS files to load (matching your Python script paths)
@@ -280,7 +279,6 @@ async function loadGTFSData() {
     for (const file of gtfsFiles) {
       try {
         console.log(`Attempting to load ${file.name} from ${file.path}...`);
-
         // Strategy 1: Try with fetch and CORS mode
         const text = await loadGTFSFileWithFetch(file.path);
         gtfsResults[file.name] = text;
@@ -344,7 +342,6 @@ async function loadGTFSFileWithFetch(filePath) {
     // Get download URL from Firebase Storage
     const fileRef = storageRef(storage, filePath);
     const downloadURL = await getDownloadURL(fileRef);
-
     console.log(`Got download URL for ${filePath}:`, downloadURL);
 
     // Try fetch with different CORS modes
@@ -602,7 +599,6 @@ function loadStopsOnMap() {
 // Start listening to real-time bus data (PRIORITY FUNCTION)
 function startRealtimeDataListener() {
   console.log('Starting real-time data listener...');
-
   const gpsDataRef = ref(database, 'gps_data');
 
   gpsDataListener = onValue(
@@ -630,7 +626,6 @@ function startRealtimeDataListener() {
 // Process bus data from Firebase (CRITICAL FUNCTION)
 function processBusData(gpsData) {
   console.log('Processing bus data...');
-
   const activeBuses = [];
   const brokenBuses = [];
 
@@ -640,6 +635,7 @@ function processBusData(gpsData) {
 
   // Process each trip
   Object.keys(gpsData).forEach((tripId) => {
+    console.log(`Processing trip: ${tripId}`);
     const tripData = gpsData[tripId];
 
     Object.keys(tripData).forEach((busId) => {
@@ -650,10 +646,18 @@ function processBusData(gpsData) {
         gtfsData && gtfsData.trips
           ? gtfsData.trips.find((trip) => trip.id === tripId)
           : null;
+
       const routeInfo =
         tripInfo && gtfsData.routes
           ? gtfsData.routes.find((route) => route.id === tripInfo.routeId)
           : null;
+
+      console.log(
+        `Bus ${busId}: tripInfo =`,
+        tripInfo,
+        `routeInfo =`,
+        routeInfo
+      );
 
       // Check if bus is broken (coordinates are 0,0 or timestamp is 0)
       const isBroken =
@@ -754,7 +758,15 @@ function showBusInfo(busInfo) {
 
   const timestamp = new Date(busData.timestamp * 1000);
   const now = new Date();
-  const timeDiff = Math.floor((now - timestamp) / (1000 * 60)); // minutes ago
+  const formattedDate = timestamp.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
   const driver = driverInfo[busId] || {
     name: 'No asignado',
     phone: 'N/A',
@@ -768,8 +780,14 @@ function showBusInfo(busInfo) {
           <span>${busId}</span>
         </div>
         <div class="info-row">
-          <strong>ID del Viaje:</strong> 
-          <span>${tripId}</span>
+          <strong>Ruta ID:</strong> 
+          <span>${
+            tripInfo && tripInfo.routeId
+              ? tripInfo.routeId
+              : routeInfo
+              ? routeInfo.id
+              : tripId
+          }</span>
         </div>
         ${
           routeInfo
@@ -811,7 +829,7 @@ function showBusInfo(busInfo) {
         </div>
         <div class="info-row">
           <strong>Última actualización:</strong> 
-          <span>${timeDiff} minutos atrás</span>
+          <span>${formattedDate}</span>
         </div>
         <div class="info-row">
           <strong>Conductor:</strong> 
@@ -861,38 +879,96 @@ function updateStopsCounter() {
   }
 }
 
-// Update buses list in sidebar
+// Update buses list in sidebar (only active buses) - FIXED VERSION
 function updateBusList(activeBuses, brokenBuses) {
   const busesList = document.getElementById('buses-list');
   if (!busesList) return;
 
+  // Store current search value if exists
+  const existingSearch = busesList.querySelector('input[type="text"]');
+  const currentSearchValue = existingSearch ? existingSearch.value : '';
+
+  // Clear and add search input
   busesList.innerHTML = '';
 
-  // Add active buses
-  activeBuses.forEach((busInfo) => {
-    const busItem = createBusListItem(busInfo, false);
-    busesList.appendChild(busItem);
+  // Add search functionality
+  const searchContainer = document.createElement('div');
+  searchContainer.style.cssText = `
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+  `;
+
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.placeholder = 'Buscar OMSA por ID...';
+  searchInput.value = currentSearchValue; // Restore previous search
+  searchInput.style.cssText = `
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+  `;
+
+  searchContainer.appendChild(searchInput);
+  busesList.appendChild(searchContainer);
+
+  // Filter and display function
+  const displayBuses = (searchTerm = '') => {
+    // Clear existing bus items and messages (keep search)
+    const busItems = busesList.querySelectorAll('.bus-item');
+    const noResultsMessages = busesList.querySelectorAll('.no-results-message');
+
+    busItems.forEach((item) => item.remove());
+    noResultsMessages.forEach((msg) => msg.remove());
+
+    // Filter active buses based on search
+    const filteredBuses = activeBuses.filter((busInfo) =>
+      busInfo.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Add filtered active buses only
+    filteredBuses.forEach((busInfo) => {
+      const busItem = createBusListItem(busInfo, false);
+      busesList.appendChild(busItem);
+    });
+
+    // Show message if no buses match
+    if (filteredBuses.length === 0) {
+      const noResultsMsg = document.createElement('p');
+      noResultsMsg.className = 'no-results-message';
+      noResultsMsg.style.cssText =
+        'text-align: center; color: #7f8c8d; padding: 1rem; margin: 0;';
+      noResultsMsg.textContent = searchTerm
+        ? `No se encontraron OMSAs con ID "${searchTerm}"`
+        : 'No hay OMSAs activas en línea';
+      busesList.appendChild(noResultsMsg);
+    }
+  };
+
+  // Add search event listener with debouncing
+  let searchTimeout;
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      displayBuses(e.target.value);
+    }, 300); // 300ms debounce
   });
 
-  // Add broken buses
-  brokenBuses.forEach((busInfo) => {
-    const busItem = createBusListItem(busInfo, true);
-    busesList.appendChild(busItem);
-  });
-
-  // Show message if no buses
-  if (activeBuses.length === 0 && brokenBuses.length === 0) {
-    busesList.innerHTML =
-      '<p style="text-align: center; color: #7f8c8d; padding: 1rem;">No hay OMSAs en línea</p>';
-  }
+  // Initial display with current search value
+  displayBuses(currentSearchValue);
 }
 
 // Create bus list item
 function createBusListItem(busInfo, isBroken) {
   const { id: busId, tripId, routeInfo } = busInfo;
+
   const item = document.createElement('div');
   item.className = `bus-item ${isBroken ? 'broken' : ''}`;
-
   item.innerHTML = `
       <div>
         <div class="bus-id">OMSA ${busId}</div>
@@ -916,7 +992,6 @@ function createBusListItem(busInfo, isBroken) {
         map.setZoom(15);
       }
     }
-
     // Show bus info
     showBusInfo(busInfo);
   });
@@ -939,6 +1014,7 @@ function updateAlerts(brokenBuses) {
 
   brokenBuses.forEach((busInfo) => {
     const { id: busId, routeInfo } = busInfo;
+
     const alertItem = document.createElement('div');
     alertItem.className = 'alert-item';
     alertItem.innerHTML = `
@@ -958,7 +1034,6 @@ function updateAlerts(brokenBuses) {
 // Utility functions
 function refreshData() {
   console.log('Refreshing data...');
-
   // Reload GTFS data
   loadGTFSData()
     .then(() => {
@@ -1074,6 +1149,20 @@ window.focusOnBus = (busId) => {
     map.setCenter(marker.getPosition());
     map.setZoom(16);
   }
+};
+
+// Filter out browser extension errors from console
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  const message = args.join(' ');
+  if (
+    message.includes('chrome-extension://') ||
+    message.includes('runtime/sendMessage') ||
+    message.includes('kwift.CHROME.js')
+  ) {
+    return; // Ignore browser extension errors
+  }
+  originalConsoleError.apply(console, args);
 };
 
 console.log('SIGESTUR Dashboard script loaded successfully');
