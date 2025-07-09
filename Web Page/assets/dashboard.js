@@ -10,6 +10,11 @@ import {
   onValue,
   off,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import {
+  getStorage,
+  ref as storageRef,
+  getDownloadURL,
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 // Firebase Config
 const firebaseConfig = {
@@ -26,17 +31,60 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
+const storage = getStorage(app);
 
 // Global variables
 let map;
-let busMarkers = new Map();
-let stopMarkers = new Map();
+const busMarkers = new Map();
+const stopMarkers = new Map();
+let trafficLayer;
 let gtfsData = null;
 let currentUser = null;
 let gpsDataListener = null;
+let isTrafficVisible = false;
 
 // Santo Domingo coordinates
 const SANTO_DOMINGO_CENTER = { lat: 18.4861, lng: -69.9312 };
+
+// Driver information (manually added for now)
+const driverInfo = {
+  C19A: {
+    name: 'Juan Pérez',
+    phone: '+1-809-555-0101',
+    id: 'DRV001',
+  },
+  C19D: {
+    name: 'María González',
+    phone: '+1-809-555-0102',
+    id: 'DRV002',
+  },
+  C19M: {
+    name: 'Carlos Rodríguez',
+    phone: '+1-809-555-0103',
+    id: 'DRV003',
+  },
+  C19O: {
+    name: 'Ana Martínez',
+    phone: '+1-809-555-0104',
+    id: 'DRV004',
+  },
+  C19S: {
+    name: 'Luis Fernández',
+    phone: '+1-809-555-0105',
+    id: 'DRV005',
+  },
+  C19X: {
+    name: 'Roberto Silva',
+    phone: '+1-809-555-0106',
+    id: 'DRV006',
+  },
+};
+
+// FontAwesome Bus Icons (SVG)
+const busIconSVG = (color = '#4CAF50') => `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="32" height="32">
+  <path fill="${color}" d="M224 0C348.8 0 448 35.2 448 80l0 16 0 320c0 17.7-14.3 32-32 32l0 32c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32l0-32-192 0 0 32c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32L0 96 0 80C0 35.2 99.2 0 224 0zM64 128l0 128c0 17.7 14.3 32 32 32l256 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32L96 96c-17.7 0-32 14.3-32 32zM80 400a32 32 0 1 0 0-64 32 32 0 1 0 0 64zm288 0a32 32 0 1 0 0-64 32 32 0 1 0 0 64z"/>
+</svg>`;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
@@ -71,7 +119,7 @@ function setupEventListeners() {
   // Map controls
   const refreshBtn = document.getElementById('refresh-btn');
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', refreshData);
+    refreshBtn.addEventListener('click', toggleTraffic);
   }
 
   const centerMapBtn = document.getElementById('center-map-btn');
@@ -125,11 +173,13 @@ async function initializeApplication() {
   try {
     console.log('Initializing SIGESTUR Dashboard...');
 
-    // Load GTFS data first
-    await loadGTFSData();
-
-    // Start listening to real-time bus data
+    // Start listening to real-time bus data FIRST (this is the priority)
     startRealtimeDataListener();
+
+    // Load GTFS data in background (non-blocking)
+    loadGTFSData().catch((error) => {
+      console.warn('GTFS loading failed, continuing with mock data:', error);
+    });
   } catch (error) {
     console.error('Error initializing app:', error);
     showAlert('Error al inicializar la aplicación');
@@ -137,7 +187,7 @@ async function initializeApplication() {
 }
 
 // Google Maps initialization (called by Google Maps API)
-window.dashboardInitMap = function () {
+window.dashboardInitMap = () => {
   console.log('Initializing Google Maps...');
 
   const mapElement = document.getElementById('map');
@@ -147,7 +197,14 @@ window.dashboardInitMap = function () {
   }
 
   try {
-    map = new google.maps.Map(mapElement, {
+    // Check if google is available
+    if (typeof window.google === 'undefined' || !window.google.maps) {
+      console.error('Google Maps API not loaded');
+      showAlert('Error: Google Maps no se pudo cargar');
+      return;
+    }
+
+    map = new window.google.maps.Map(mapElement, {
       zoom: 12,
       center: SANTO_DOMINGO_CENTER,
       mapTypeId: 'roadmap',
@@ -159,6 +216,9 @@ window.dashboardInitMap = function () {
         },
       ],
     });
+
+    // Initialize traffic layer
+    trafficLayer = new window.google.maps.TrafficLayer();
 
     console.log('Google Maps initialized successfully');
 
@@ -172,63 +232,170 @@ window.dashboardInitMap = function () {
   }
 };
 
-// Load GTFS data from local files
+// Toggle traffic layer
+function toggleTraffic() {
+  if (!trafficLayer || !map) {
+    showAlert('Mapa no disponible', 'warning');
+    return;
+  }
+
+  if (isTrafficVisible) {
+    trafficLayer.setMap(null);
+    isTrafficVisible = false;
+    document.getElementById('refresh-btn').textContent = '🚦 Mostrar Tráfico';
+    showAlert('Capa de tráfico ocultada', 'info');
+  } else {
+    trafficLayer.setMap(map);
+    isTrafficVisible = true;
+    document.getElementById('refresh-btn').textContent = '🚦 Ocultar Tráfico';
+    showAlert('Capa de tráfico activada', 'success');
+  }
+}
+
+// Load GTFS data with multiple fallback strategies
 async function loadGTFSData() {
   try {
-    console.log('Loading GTFS data from local files...');
+    console.log('Loading GTFS data from Firebase Storage...');
+    showAlert('Cargando datos GTFS...', 'info');
 
-    // Load stops data
-    const stopsResponse = await fetch('../../STATIC GTFS/stops.txt');
-    if (!stopsResponse.ok) throw new Error('Failed to load stops.txt');
-    const stopsText = await stopsResponse.text();
-
-    // Load routes data
-    const routesResponse = await fetch('../../STATIC GTFS/routes.txt');
-    if (!routesResponse.ok) throw new Error('Failed to load routes.txt');
-    const routesText = await routesResponse.text();
-
-    // Load trips data
-    const tripsResponse = await fetch('../../STATIC GTFS/trips.txt');
-    if (!tripsResponse.ok) throw new Error('Failed to load trips.txt');
-    const tripsText = await tripsResponse.text();
-
-    // Parse the data
-    gtfsData = {
-      stops: parseGTFSStops(stopsText),
-      routes: parseGTFSRoutes(routesText),
-      trips: parseGTFSTrips(tripsText),
-    };
-
-    console.log('GTFS data loaded successfully:', {
-      stops: gtfsData.stops.length,
-      routes: gtfsData.routes.length,
-      trips: gtfsData.trips.length,
-    });
-
-    updateStopsCounter();
-  } catch (error) {
-    console.error('Error loading GTFS data:', error);
-    // Fallback to mock data
+    // Initialize with mock data first
     gtfsData = {
       stops: getMockStops(),
       routes: [],
       trips: [],
     };
     updateStopsCounter();
-    showAlert('Error cargando datos GTFS, usando datos de prueba', 'warning');
+
+    // Define the GTFS files to load (matching your Python script paths)
+    const gtfsFiles = [
+      { name: 'stops', path: 'STATIC GTFS/stops.txt' },
+      { name: 'routes', path: 'STATIC GTFS/routes.txt' },
+      { name: 'trips', path: 'STATIC GTFS/trips.txt' },
+    ];
+
+    const gtfsResults = {};
+    let successCount = 0;
+
+    // Try to load each file with multiple strategies
+    for (const file of gtfsFiles) {
+      try {
+        console.log(`Attempting to load ${file.name} from ${file.path}...`);
+
+        // Strategy 1: Try with fetch and CORS mode
+        const text = await loadGTFSFileWithFetch(file.path);
+        gtfsResults[file.name] = text;
+        successCount++;
+        console.log(
+          `✅ Successfully loaded ${file.name} (${text.length} characters)`
+        );
+      } catch (error) {
+        console.warn(`❌ Failed to load ${file.name}:`, error.message);
+        gtfsResults[file.name] = null;
+      }
+    }
+
+    // Parse successfully loaded data
+    if (gtfsResults.stops) {
+      const parsedStops = parseGTFSStops(gtfsResults.stops);
+      if (parsedStops.length > 0) {
+        gtfsData.stops = parsedStops;
+      }
+    }
+
+    if (gtfsResults.routes) {
+      gtfsData.routes = parseGTFSRoutes(gtfsResults.routes);
+    }
+
+    if (gtfsResults.trips) {
+      gtfsData.trips = parseGTFSTrips(gtfsResults.trips);
+    }
+
+    console.log('GTFS data processed:', {
+      stops: gtfsData.stops.length,
+      routes: gtfsData.routes.length,
+      trips: gtfsData.trips.length,
+      successfulFiles: successCount,
+    });
+
+    updateStopsCounter();
+
+    // Load stops on map if map is ready
+    if (map && gtfsData.stops.length > 0) {
+      loadStopsOnMap();
+    }
+
+    if (successCount > 0) {
+      showAlert(
+        `GTFS parcialmente cargado: ${gtfsData.stops.length} paradas, ${gtfsData.routes.length} rutas`,
+        'success'
+      );
+    } else {
+      showAlert('Usando datos de prueba - Error cargando GTFS', 'warning');
+    }
+  } catch (error) {
+    console.error('Error loading GTFS data:', error);
+    showAlert('Error cargando GTFS, usando datos de prueba', 'warning');
+  }
+}
+
+// Load GTFS file using fetch with proper CORS handling
+async function loadGTFSFileWithFetch(filePath) {
+  try {
+    // Get download URL from Firebase Storage
+    const fileRef = storageRef(storage, filePath);
+    const downloadURL = await getDownloadURL(fileRef);
+
+    console.log(`Got download URL for ${filePath}:`, downloadURL);
+
+    // Try fetch with different CORS modes
+    const corsOptions = [
+      { mode: 'cors', credentials: 'omit' },
+      { mode: 'no-cors' },
+      {},
+    ];
+
+    for (const options of corsOptions) {
+      try {
+        const response = await fetch(downloadURL, {
+          method: 'GET',
+          headers: {
+            Accept: 'text/plain,text/csv,*/*',
+          },
+          ...options,
+        });
+
+        if (response.ok) {
+          const text = await response.text();
+          if (text && text.length > 0) {
+            return text;
+          }
+        }
+      } catch (fetchError) {
+        console.warn(
+          `Fetch attempt failed for ${filePath}:`,
+          fetchError.message
+        );
+        continue;
+      }
+    }
+
+    throw new Error(`All fetch attempts failed for ${filePath}`);
+  } catch (error) {
+    console.error(`Error loading ${filePath}:`, error);
+    throw error;
   }
 }
 
 // Parse GTFS stops data
 function parseGTFSStops(csvText) {
-  const lines = csvText.split('\n');
-  if (lines.length === 0) return [];
+  try {
+    const lines = csvText.split('\n').filter((line) => line.trim());
+    if (lines.length === 0) return [];
 
-  const headers = lines[0].split(',').map((h) => h.trim());
-  const stops = [];
+    const headers = lines[0].split(',').map((h) => h.trim().replace(/"/g, ''));
+    const stops = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim()) {
+    for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',');
       const stop = {};
 
@@ -239,13 +406,13 @@ function parseGTFSStops(csvText) {
       });
 
       if (stop.stop_lat && stop.stop_lon) {
-        const lat = parseFloat(stop.stop_lat);
-        const lng = parseFloat(stop.stop_lon);
+        const lat = Number.parseFloat(stop.stop_lat);
+        const lng = Number.parseFloat(stop.stop_lon);
 
-        if (!isNaN(lat) && !isNaN(lng)) {
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
           stops.push({
-            id: stop.stop_id,
-            name: stop.stop_name || `Parada ${stop.stop_id}`,
+            id: stop.stop_id || `stop_${i}`,
+            name: stop.stop_name || `Parada ${stop.stop_id || i}`,
             lat: lat,
             lng: lng,
             code: stop.stop_code || '',
@@ -253,21 +420,25 @@ function parseGTFSStops(csvText) {
         }
       }
     }
-  }
 
-  return stops;
+    console.log(`Parsed ${stops.length} stops from GTFS data`);
+    return stops;
+  } catch (error) {
+    console.error('Error parsing GTFS stops:', error);
+    return [];
+  }
 }
 
 // Parse GTFS routes data
 function parseGTFSRoutes(csvText) {
-  const lines = csvText.split('\n');
-  if (lines.length === 0) return [];
+  try {
+    const lines = csvText.split('\n').filter((line) => line.trim());
+    if (lines.length === 0) return [];
 
-  const headers = lines[0].split(',').map((h) => h.trim());
-  const routes = [];
+    const headers = lines[0].split(',').map((h) => h.trim().replace(/"/g, ''));
+    const routes = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim()) {
+    for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',');
       const route = {};
 
@@ -283,25 +454,29 @@ function parseGTFSRoutes(csvText) {
           shortName: route.route_short_name || '',
           longName: route.route_long_name || '',
           type: route.route_type || '',
-          color: route.route_color || '3498db',
+          color: route.route_color || '4CAF50',
         });
       }
     }
-  }
 
-  return routes;
+    console.log(`Parsed ${routes.length} routes from GTFS data`);
+    return routes;
+  } catch (error) {
+    console.error('Error parsing GTFS routes:', error);
+    return [];
+  }
 }
 
 // Parse GTFS trips data
 function parseGTFSTrips(csvText) {
-  const lines = csvText.split('\n');
-  if (lines.length === 0) return [];
+  try {
+    const lines = csvText.split('\n').filter((line) => line.trim());
+    if (lines.length === 0) return [];
 
-  const headers = lines[0].split(',').map((h) => h.trim());
-  const trips = [];
+    const headers = lines[0].split(',').map((h) => h.trim().replace(/"/g, ''));
+    const trips = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim()) {
+    for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',');
       const trip = {};
 
@@ -321,9 +496,13 @@ function parseGTFSTrips(csvText) {
         });
       }
     }
-  }
 
-  return trips;
+    console.log(`Parsed ${trips.length} trips from GTFS data`);
+    return trips;
+  } catch (error) {
+    console.error('Error parsing GTFS trips:', error);
+    return [];
+  }
 }
 
 // Mock stops data for development (Santo Domingo area)
@@ -363,9 +542,13 @@ function loadStopsOnMap() {
 
   console.log('Loading stops on map...');
 
+  // Clear existing stop markers
+  stopMarkers.forEach((marker) => marker.setMap(null));
+  stopMarkers.clear();
+
   gtfsData.stops.forEach((stop) => {
     try {
-      const marker = new google.maps.Marker({
+      const marker = new window.google.maps.Marker({
         position: { lat: stop.lat, lng: stop.lng },
         map: map,
         title: stop.name,
@@ -374,20 +557,20 @@ function loadStopsOnMap() {
             'data:image/svg+xml;charset=UTF-8,' +
             encodeURIComponent(`
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="8" fill="#3498db" stroke="white" stroke-width="2"/>
+              <circle cx="12" cy="12" r="8" fill="#2196F3" stroke="white" stroke-width="2"/>
               <circle cx="12" cy="12" r="3" fill="white"/>
             </svg>
           `),
-          scaledSize: new google.maps.Size(24, 24),
-          anchor: new google.maps.Point(12, 12),
+          scaledSize: new window.google.maps.Size(24, 24),
+          anchor: new window.google.maps.Point(12, 12),
         },
       });
 
       // Add info window for stop
-      const infoWindow = new google.maps.InfoWindow({
+      const infoWindow = new window.google.maps.InfoWindow({
         content: `
           <div style="padding: 10px;">
-            <h3 style="margin: 0 0 5px 0; color: #2c3e50;">${stop.name}</h3>
+            <h3 style="margin: 0 0 5px 0; color: #2c3e50;">🚏 ${stop.name}</h3>
             <p style="margin: 0; color: #7f8c8d; font-size: 12px;">ID: ${
               stop.id
             }</p>
@@ -396,6 +579,9 @@ function loadStopsOnMap() {
                 ? `<p style="margin: 0; color: #7f8c8d; font-size: 12px;">Código: ${stop.code}</p>`
                 : ''
             }
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 11px;">
+              Coordenadas: ${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}
+            </p>
           </div>
         `,
       });
@@ -413,7 +599,7 @@ function loadStopsOnMap() {
   console.log(`Loaded ${gtfsData.stops.length} stops on map`);
 }
 
-// Start listening to real-time bus data
+// Start listening to real-time bus data (PRIORITY FUNCTION)
 function startRealtimeDataListener() {
   console.log('Starting real-time data listener...');
 
@@ -423,6 +609,8 @@ function startRealtimeDataListener() {
     gpsDataRef,
     (snapshot) => {
       const data = snapshot.val();
+      console.log('GPS data received:', data ? 'Data available' : 'No data');
+
       if (data) {
         processBusData(data);
       } else {
@@ -434,15 +622,14 @@ function startRealtimeDataListener() {
     },
     (error) => {
       console.error('Error listening to GPS data:', error);
-      showAlert('Error conectando con datos en tiempo real');
+      showAlert('Error conectando con datos en tiempo real', 'error');
     }
   );
 }
 
-// Process bus data from Firebase
-// Process bus data from Firebase
+// Process bus data from Firebase (CRITICAL FUNCTION)
 function processBusData(gpsData) {
-  console.log('Processing bus data:', gpsData);
+  console.log('Processing bus data...');
 
   const activeBuses = [];
   const brokenBuses = [];
@@ -458,19 +645,20 @@ function processBusData(gpsData) {
     Object.keys(tripData).forEach((busId) => {
       const busData = tripData[busId];
 
-      // Get trip information from GTFS data
+      // Get trip information from GTFS data (if available)
       const tripInfo =
         gtfsData && gtfsData.trips
           ? gtfsData.trips.find((trip) => trip.id === tripId)
           : null;
-
       const routeInfo =
         tripInfo && gtfsData.routes
           ? gtfsData.routes.find((route) => route.id === tripInfo.routeId)
           : null;
 
-      // Check if bus is broken (coordinates are 0,0)
-      const isBroken = busData.latitude === 0 && busData.longitude === 0;
+      // Check if bus is broken (coordinates are 0,0 or timestamp is 0)
+      const isBroken =
+        (busData.latitude === 0 && busData.longitude === 0) ||
+        busData.timestamp === 0;
 
       const busInfo = {
         id: busId,
@@ -490,21 +678,25 @@ function processBusData(gpsData) {
     });
   });
 
+  console.log(
+    `Processed ${activeBuses.length} active buses, ${brokenBuses.length} broken buses`
+  );
+
   // Update UI
   updateBusCounters(activeBuses.length, brokenBuses.length);
   updateBusList(activeBuses, brokenBuses);
   updateAlerts(brokenBuses);
 }
 
-// Create bus marker on map
+// Create bus marker on map using FontAwesome icon
 function createBusMarker(busInfo) {
   if (!map) return;
 
   const { id: busId, tripId, data: busData, routeInfo, isBroken } = busInfo;
 
   const position = {
-    lat: parseFloat(busData.latitude),
-    lng: parseFloat(busData.longitude),
+    lat: Number.parseFloat(busData.latitude),
+    lng: Number.parseFloat(busData.longitude),
   };
 
   // Validate coordinates
@@ -513,42 +705,20 @@ function createBusMarker(busInfo) {
     return;
   }
 
-  // Use route color if available, otherwise default colors
-  const iconColor = isBroken
-    ? '#e74c3c'
-    : routeInfo && routeInfo.color
-    ? `#${routeInfo.color}`
-    : '#27ae60';
-
-  const iconSvg = `
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="8" width="24" height="16" rx="2" fill="${iconColor}" stroke="white" stroke-width="2"/>
-        <rect x="6" y="10" width="20" height="8" fill="white" opacity="0.3"/>
-        <circle cx="10" cy="26" r="2" fill="${iconColor}"/>
-        <circle cx="22" cy="26" r="2" fill="${iconColor}"/>
-        <rect x="14" y="6" width="4" height="2" fill="${iconColor}"/>
-        ${
-          isBroken
-            ? '<text x="16" y="18" text-anchor="middle" fill="white" font-size="12">!</text>'
-            : ''
-        }
-        ${
-          routeInfo && routeInfo.shortName && !isBroken
-            ? `<text x="16" y="18" text-anchor="middle" fill="white" font-size="8">${routeInfo.shortName}</text>`
-            : ''
-        }
-      </svg>
-    `;
+  // Use green for active buses, red for broken buses
+  const iconColor = isBroken ? '#F44336' : '#4CAF50';
 
   try {
-    const marker = new google.maps.Marker({
+    const marker = new window.google.maps.Marker({
       position: position,
       map: map,
-      title: `Bus ${busId} - ${routeInfo ? routeInfo.shortName : tripId}`,
+      title: `OMSA ${busId} - ${routeInfo ? routeInfo.shortName : tripId}`,
       icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(iconSvg),
-        scaledSize: new google.maps.Size(32, 32),
-        anchor: new google.maps.Point(16, 26),
+        url:
+          'data:image/svg+xml;charset=UTF-8,' +
+          encodeURIComponent(busIconSVG(iconColor)),
+        scaledSize: new window.google.maps.Size(32, 32),
+        anchor: new window.google.maps.Point(16, 26),
       },
     });
 
@@ -563,7 +733,7 @@ function createBusMarker(busInfo) {
   }
 }
 
-// Show bus information modal
+// Show bus information modal with driver info
 function showBusInfo(busInfo) {
   const {
     id: busId,
@@ -573,6 +743,7 @@ function showBusInfo(busInfo) {
     routeInfo,
     isBroken,
   } = busInfo;
+
   const modal = document.getElementById('bus-modal');
   const content = document.getElementById('bus-info-content');
 
@@ -581,12 +752,19 @@ function showBusInfo(busInfo) {
     return;
   }
 
-  const timestamp = new Date(busData.timestamp * 1000).toLocaleString();
+  const timestamp = new Date(busData.timestamp * 1000);
+  const now = new Date();
+  const timeDiff = Math.floor((now - timestamp) / (1000 * 60)); // minutes ago
+  const driver = driverInfo[busId] || {
+    name: 'No asignado',
+    phone: 'N/A',
+    id: 'N/A',
+  };
 
   content.innerHTML = `
       <div class="bus-info">
         <div class="info-row">
-          <strong>ID del Bus:</strong> 
+          <strong>ID de OMSA:</strong> 
           <span>${busId}</span>
         </div>
         <div class="info-row">
@@ -616,24 +794,40 @@ function showBusInfo(busInfo) {
         <div class="info-row">
           <strong>Estado:</strong> 
           <span class="status-badge ${isBroken ? 'broken' : 'active'}">
-            ${isBroken ? 'Averiado' : 'Activo'}
+            ${isBroken ? 'Averiada' : 'Activa'}
           </span>
         </div>
         <div class="info-row">
           <strong>Dirección:</strong> 
-          <span>${busData.direction_id === '0' ? 'Ida' : 'Vuelta'}</span>
+          <span>${busData.direction_id === '0' ? 'Vuelta' : 'Ida'}</span>
         </div>
         <div class="info-row">
-          <strong>Coordenadas:</strong> 
-          <span>${busData.latitude}, ${busData.longitude}</span>
+          <strong>Latitud:</strong> 
+          <span>${Number.parseFloat(busData.latitude).toFixed(6)}</span>
         </div>
         <div class="info-row">
-          <strong>Última Actualización:</strong> 
-          <span>${timestamp}</span>
+          <strong>Longitud:</strong> 
+          <span>${Number.parseFloat(busData.longitude).toFixed(6)}</span>
+        </div>
+        <div class="info-row">
+          <strong>Última actualización:</strong> 
+          <span>${timeDiff} minutos atrás</span>
+        </div>
+        <div class="info-row">
+          <strong>Conductor:</strong> 
+          <span>${driver.name}</span>
+        </div>
+        <div class="info-row">
+          <strong>ID Conductor:</strong> 
+          <span>${driver.id}</span>
+        </div>
+        <div class="info-row">
+          <strong>Teléfono:</strong> 
+          <span>${driver.phone}</span>
         </div>
         ${
           isBroken
-            ? '<div class="alert-message">⚠️ Este bus está reportado como averiado</div>'
+            ? '<div class="alert-message">⚠️ Esta OMSA está fuera de servicio - Sin señal GPS</div>'
             : ''
         }
       </div>
@@ -689,7 +883,7 @@ function updateBusList(activeBuses, brokenBuses) {
   // Show message if no buses
   if (activeBuses.length === 0 && brokenBuses.length === 0) {
     busesList.innerHTML =
-      '<p style="text-align: center; color: #7f8c8d; padding: 1rem;">No hay buses en línea</p>';
+      '<p style="text-align: center; color: #7f8c8d; padding: 1rem;">No hay OMSAs en línea</p>';
   }
 }
 
@@ -701,7 +895,7 @@ function createBusListItem(busInfo, isBroken) {
 
   item.innerHTML = `
       <div>
-        <div class="bus-id">${busId}</div>
+        <div class="bus-id">OMSA ${busId}</div>
         ${
           routeInfo
             ? `<div style="font-size: 0.8rem; color: #7f8c8d;">${routeInfo.shortName}</div>`
@@ -709,20 +903,22 @@ function createBusListItem(busInfo, isBroken) {
         }
       </div>
       <div class="bus-status ${isBroken ? 'broken' : 'active'}">
-        ${isBroken ? 'Averiado' : 'Activo'}
+        ${isBroken ? 'Averiada' : 'Activa'}
       </div>
     `;
 
   item.addEventListener('click', () => {
-    // Center map on bus location if available
-    const marker = busMarkers.get(busId);
-    if (marker && map) {
-      map.setCenter(marker.getPosition());
-      map.setZoom(15);
-
-      // Show bus info
-      showBusInfo(busInfo);
+    if (!isBroken) {
+      // Center map on bus location if available
+      const marker = busMarkers.get(busId);
+      if (marker && map) {
+        map.setCenter(marker.getPosition());
+        map.setZoom(15);
+      }
     }
+
+    // Show bus info
+    showBusInfo(busInfo);
   });
 
   return item;
@@ -737,7 +933,7 @@ function updateAlerts(brokenBuses) {
 
   if (brokenBuses.length === 0) {
     alertsContainer.innerHTML =
-      '<p style="color: #27ae60; text-align: center; padding: 1rem;">No hay alertas activas</p>';
+      '<p style="color: #4CAF50; text-align: center; padding: 1rem;">No hay alertas activas</p>';
     return;
   }
 
@@ -746,9 +942,9 @@ function updateAlerts(brokenBuses) {
     const alertItem = document.createElement('div');
     alertItem.className = 'alert-item';
     alertItem.innerHTML = `
-        <strong>Bus ${busId}</strong>
+        <strong>OMSA ${busId}</strong>
         ${routeInfo ? `<br><small>Ruta: ${routeInfo.shortName}</small>` : ''}
-        <br><small>Reportado como averiado</small>
+        <br><small>Fuera de servicio - Sin señal GPS</small>
       `;
 
     alertItem.addEventListener('click', () => {
@@ -767,19 +963,13 @@ function refreshData() {
   loadGTFSData()
     .then(() => {
       if (map && gtfsData && gtfsData.stops) {
-        // Clear existing stop markers
-        stopMarkers.forEach((marker) => marker.setMap(null));
-        stopMarkers.clear();
-
-        // Reload stops
         loadStopsOnMap();
       }
-
       showAlert('Datos actualizados correctamente', 'success');
     })
     .catch((error) => {
       console.error('Error refreshing data:', error);
-      showAlert('Error al actualizar los datos');
+      showAlert('Error al actualizar los datos', 'error');
     });
 }
 
@@ -805,12 +995,13 @@ function showAlert(message, type = 'error') {
       padding: 1rem 1.5rem;
       background-color: ${getAlertColor(type)};
       color: white;
-      border-radius: 4px;
+      border-radius: 8px;
       z-index: 3000;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       font-size: 0.9rem;
       max-width: 300px;
       word-wrap: break-word;
+      backdrop-filter: blur(10px);
     `;
   alertDiv.textContent = message;
 
@@ -827,13 +1018,13 @@ function showAlert(message, type = 'error') {
 function getAlertColor(type) {
   switch (type) {
     case 'success':
-      return '#27ae60';
+      return '#4CAF50';
     case 'warning':
-      return '#f39c12';
+      return '#FF9800';
     case 'info':
-      return '#3498db';
+      return '#2196F3';
     default:
-      return '#e74c3c';
+      return '#F44336';
   }
 }
 
@@ -849,7 +1040,7 @@ document.addEventListener('visibilitychange', () => {
 // Handle window resize for responsive map
 window.addEventListener('resize', () => {
   if (map) {
-    google.maps.event.trigger(map, 'resize');
+    window.google.maps.event.trigger(map, 'resize');
   }
 });
 
@@ -865,14 +1056,24 @@ window.addEventListener('unhandledrejection', (event) => {
   showAlert('Error de conexión - verificando...');
 });
 
-// Export functions for debugging (optional)
+// Export functions for debugging and global access
 window.debugDashboard = {
   gtfsData: () => gtfsData,
   busMarkers: () => busMarkers,
   stopMarkers: () => stopMarkers,
   refreshData,
   centerMap,
+  toggleTraffic,
   map: () => map,
 };
 
-console.log('Dashboard script loaded successfully');
+// Make functions available globally for HTML onclick events
+window.focusOnBus = (busId) => {
+  const marker = busMarkers.get(busId);
+  if (marker && map) {
+    map.setCenter(marker.getPosition());
+    map.setZoom(16);
+  }
+};
+
+console.log('SIGESTUR Dashboard script loaded successfully');
