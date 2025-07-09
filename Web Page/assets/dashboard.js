@@ -128,6 +128,23 @@ function setupEventListeners() {
     centerMapBtn.addEventListener('click', centerMap);
   }
 
+  // Controls tab toggle
+  const controlsTab = document.getElementById('controls-tab');
+  const controlsPanel = document.getElementById('controls-panel');
+  if (controlsTab && controlsPanel) {
+    controlsTab.addEventListener('click', toggleControlsPanel);
+
+    // Close panel when clicking outside
+    document.addEventListener('click', (e) => {
+      if (
+        !controlsTab.contains(e.target) &&
+        !controlsPanel.contains(e.target)
+      ) {
+        closeControlsPanel();
+      }
+    });
+  }
+
   // Modal close
   const closeBtn = document.querySelector('.close');
   if (closeBtn) {
@@ -142,6 +159,40 @@ function setupEventListeners() {
       }
     });
   }
+}
+
+// Toggle controls panel
+function toggleControlsPanel() {
+  const controlsTab = document.getElementById('controls-tab');
+  const controlsPanel = document.getElementById('controls-panel');
+
+  if (controlsPanel.classList.contains('active')) {
+    closeControlsPanel();
+  } else {
+    openControlsPanel();
+  }
+}
+
+// Open controls panel
+function openControlsPanel() {
+  const controlsTab = document.getElementById('controls-tab');
+  const controlsPanel = document.getElementById('controls-panel');
+
+  controlsTab.classList.add('active');
+  controlsPanel.classList.add('active');
+  controlsTab.innerHTML = '✖️'; // Change icon to close
+  controlsTab.title = 'Cerrar controles';
+}
+
+// Close controls panel
+function closeControlsPanel() {
+  const controlsTab = document.getElementById('controls-tab');
+  const controlsPanel = document.getElementById('controls-panel');
+
+  controlsTab.classList.remove('active');
+  controlsPanel.classList.remove('active');
+  controlsTab.innerHTML = '⚙️'; // Change icon back to settings
+  controlsTab.title = 'Controles del mapa';
 }
 
 // Handle logout properly
@@ -756,6 +807,19 @@ function showBusInfo(busInfo) {
     return;
   }
 
+  // Get modal content element to add appropriate class
+  const modalContent = modal.querySelector('.modal-content');
+
+  // Remove existing bus status classes
+  modalContent.classList.remove('bus-active', 'bus-broken');
+
+  // Add appropriate class based on bus status
+  if (isBroken) {
+    modalContent.classList.add('bus-broken');
+  } else {
+    modalContent.classList.add('bus-active');
+  }
+
   const timestamp = new Date(busData.timestamp * 1000);
   const now = new Date();
   const formattedDate = timestamp.toLocaleDateString('en-US', {
@@ -773,14 +837,22 @@ function showBusInfo(busInfo) {
     id: 'N/A',
   };
 
+  // Update modal title with appropriate icon
+  const modalTitle = modal.querySelector('#modal-title');
+  if (modalTitle) {
+    modalTitle.innerHTML = `${
+      isBroken ? '🚌💥' : '🚌✅'
+    } Información de la OMSA`;
+  }
+
   content.innerHTML = `
       <div class="bus-info">
         <div class="info-row">
-          <strong>ID de OMSA:</strong> 
+          <strong data-label="id">ID de OMSA:</strong> 
           <span>${busId}</span>
         </div>
         <div class="info-row">
-          <strong>Ruta ID:</strong> 
+          <strong data-label="route">Ruta ID:</strong> 
           <span>${
             tripInfo && tripInfo.routeId
               ? tripInfo.routeId
@@ -793,7 +865,7 @@ function showBusInfo(busInfo) {
           routeInfo
             ? `
           <div class="info-row">
-            <strong>Ruta:</strong> 
+            <strong data-label="route">Ruta:</strong> 
             <span>${routeInfo.shortName} - ${routeInfo.longName}</span>
           </div>
         `
@@ -803,55 +875,58 @@ function showBusInfo(busInfo) {
           tripInfo && tripInfo.headsign
             ? `
           <div class="info-row">
-            <strong>Destino:</strong> 
+            <strong data-label="direction">Destino:</strong> 
             <span>${tripInfo.headsign}</span>
           </div>
         `
             : ''
         }
         <div class="info-row">
-          <strong>Estado:</strong> 
+          <strong data-label="status">Estado:</strong> 
           <span class="status-badge ${isBroken ? 'broken' : 'active'}">
             ${isBroken ? 'Averiada' : 'Activa'}
           </span>
         </div>
         <div class="info-row">
-          <strong>Dirección:</strong> 
+          <strong data-label="direction">Dirección:</strong> 
           <span>${busData.direction_id === '0' ? 'Vuelta' : 'Ida'}</span>
         </div>
         <div class="info-row">
-          <strong>Latitud:</strong> 
+          <strong data-label="location">Latitud:</strong> 
           <span>${Number.parseFloat(busData.latitude).toFixed(6)}</span>
         </div>
         <div class="info-row">
-          <strong>Longitud:</strong> 
+          <strong data-label="location">Longitud:</strong> 
           <span>${Number.parseFloat(busData.longitude).toFixed(6)}</span>
         </div>
         <div class="info-row">
-          <strong>Última actualización:</strong> 
+          <strong data-label="time">Última actualización:</strong> 
           <span>${formattedDate}</span>
         </div>
         <div class="info-row">
-          <strong>Conductor:</strong> 
+          <strong data-label="driver">Conductor:</strong> 
           <span>${driver.name}</span>
         </div>
         <div class="info-row">
-          <strong>ID Conductor:</strong> 
+          <strong data-label="driver">ID Conductor:</strong> 
           <span>${driver.id}</span>
         </div>
         <div class="info-row">
-          <strong>Teléfono:</strong> 
+          <strong data-label="phone">Teléfono:</strong> 
           <span>${driver.phone}</span>
         </div>
         ${
           isBroken
-            ? '<div class="alert-message">⚠️ Esta OMSA está fuera de servicio - Sin señal GPS</div>'
+            ? '<div class="alert-message">Esta OMSA está fuera de servicio - Sin señal GPS</div>'
             : ''
         }
       </div>
     `;
 
   modal.style.display = 'block';
+
+  // Add smooth scroll behavior to modal content
+  modalContent.style.scrollBehavior = 'smooth';
 }
 
 // Close modal
