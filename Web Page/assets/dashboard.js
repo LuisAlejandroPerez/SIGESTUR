@@ -91,7 +91,40 @@ const busIconSVG = (
 document.addEventListener('DOMContentLoaded', () => {
   initializeAuth();
   setupEventListeners();
+  initializeTheme();
 });
+
+// Theme management
+function initializeTheme() {
+  // Check for saved theme preference or default to light mode
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+
+  // Update theme toggle button
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    themeToggle.title =
+      theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  setTheme(newTheme);
+
+  // Show theme change notification
+  showAlert(
+    `Modo ${newTheme === 'dark' ? 'oscuro' : 'claro'} activado`,
+    'info'
+  );
+}
 
 // Authentication
 function initializeAuth() {
@@ -115,6 +148,12 @@ function setupEventListeners() {
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
+  }
+
+  // Theme toggle button
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
   }
 
   // Map controls
@@ -159,6 +198,20 @@ function setupEventListeners() {
       }
     });
   }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + D for dark mode toggle
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+      e.preventDefault();
+      toggleTheme();
+    }
+    // Ctrl/Cmd + M for map controls toggle
+    if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
+      e.preventDefault();
+      toggleControlsPanel();
+    }
+  });
 }
 
 // Toggle controls panel
@@ -253,17 +306,98 @@ window.dashboardInitMap = () => {
       return;
     }
 
+    // Create map styles for dark mode
+    const lightMapStyles = [];
+    const darkMapStyles = [
+      { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+      { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+      { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+      {
+        featureType: 'administrative.locality',
+        elementType: 'labels.text.fill',
+        stylers: [{ color: '#d59563' }],
+      },
+      {
+        featureType: 'poi',
+        elementType: 'labels.text.fill',
+        stylers: [{ color: '#d59563' }],
+      },
+      {
+        featureType: 'poi.park',
+        elementType: 'geometry',
+        stylers: [{ color: '#263c3f' }],
+      },
+      {
+        featureType: 'poi.park',
+        elementType: 'labels.text.fill',
+        stylers: [{ color: '#6b9a76' }],
+      },
+      {
+        featureType: 'road',
+        elementType: 'geometry',
+        stylers: [{ color: '#38414e' }],
+      },
+      {
+        featureType: 'road',
+        elementType: 'geometry.stroke',
+        stylers: [{ color: '#212a37' }],
+      },
+      {
+        featureType: 'road',
+        elementType: 'labels.text.fill',
+        stylers: [{ color: '#9ca5b3' }],
+      },
+      {
+        featureType: 'road.highway',
+        elementType: 'geometry',
+        stylers: [{ color: '#746855' }],
+      },
+      {
+        featureType: 'road.highway',
+        elementType: 'geometry.stroke',
+        stylers: [{ color: '#1f2835' }],
+      },
+      {
+        featureType: 'road.highway',
+        elementType: 'labels.text.fill',
+        stylers: [{ color: '#f3d19c' }],
+      },
+      {
+        featureType: 'transit',
+        elementType: 'geometry',
+        stylers: [{ color: '#2f3948' }],
+      },
+      {
+        featureType: 'transit.station',
+        elementType: 'labels.text.fill',
+        stylers: [{ color: '#d59563' }],
+      },
+      {
+        featureType: 'water',
+        elementType: 'geometry',
+        stylers: [{ color: '#17263c' }],
+      },
+      {
+        featureType: 'water',
+        elementType: 'labels.text.fill',
+        stylers: [{ color: '#515c6d' }],
+      },
+      {
+        featureType: 'water',
+        elementType: 'labels.text.stroke',
+        stylers: [{ color: '#17263c' }],
+      },
+    ];
+
+    // Get current theme
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const mapStyles = currentTheme === 'dark' ? darkMapStyles : lightMapStyles;
+
     map = new window.google.maps.Map(mapElement, {
       zoom: 12,
       center: SANTO_DOMINGO_CENTER,
       mapTypeId: 'roadmap',
-      styles: [
-        {
-          featureType: 'transit',
-          elementType: 'labels.icon',
-          stylers: [{ visibility: 'off' }],
-        },
-      ],
+      styles: mapStyles,
     });
 
     // Initialize traffic layer
@@ -275,6 +409,26 @@ window.dashboardInitMap = () => {
     if (gtfsData && gtfsData.stops) {
       loadStopsOnMap();
     }
+
+    // Listen for theme changes to update map styles
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === 'attributes' &&
+          mutation.attributeName === 'data-theme'
+        ) {
+          const newTheme = document.documentElement.getAttribute('data-theme');
+          const newMapStyles =
+            newTheme === 'dark' ? darkMapStyles : lightMapStyles;
+          map.setOptions({ styles: newMapStyles });
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
   } catch (error) {
     console.error('Error initializing Google Maps:', error);
     showAlert('Error al inicializar el mapa');
@@ -840,9 +994,7 @@ function showBusInfo(busInfo) {
   // Update modal title with appropriate icon
   const modalTitle = modal.querySelector('#modal-title');
   if (modalTitle) {
-    modalTitle.innerHTML = `${
-      isBroken ? '🚌💥' : '🚌✅'
-    } Información de la OMSA`;
+    modalTitle.innerHTML = '🚌 Información de la OMSA';
   }
 
   content.innerHTML = `
@@ -987,6 +1139,9 @@ function updateBusList(activeBuses, brokenBuses) {
     font-size: 0.9rem;
     outline: none;
     box-sizing: border-box;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: all var(--transition-normal);
   `;
 
   searchContainer.appendChild(searchInput);
@@ -1017,7 +1172,7 @@ function updateBusList(activeBuses, brokenBuses) {
       const noResultsMsg = document.createElement('p');
       noResultsMsg.className = 'no-results-message';
       noResultsMsg.style.cssText =
-        'text-align: center; color: #7f8c8d; padding: 1rem; margin: 0;';
+        'text-align: center; color: var(--text-muted); padding: 1rem; margin: 0;';
       noResultsMsg.textContent = searchTerm
         ? `No se encontraron OMSAs con ID "${searchTerm}"`
         : 'No hay OMSAs activas en línea';
@@ -1049,7 +1204,7 @@ function createBusListItem(busInfo, isBroken) {
         <div class="bus-id">OMSA ${busId}</div>
         ${
           routeInfo
-            ? `<div style="font-size: 0.8rem; color: #7f8c8d;">${routeInfo.shortName}</div>`
+            ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${routeInfo.shortName}</div>`
             : ''
         }
       </div>
@@ -1214,6 +1369,7 @@ window.debugDashboard = {
   refreshData,
   centerMap,
   toggleTraffic,
+  toggleTheme,
   map: () => map,
 };
 
