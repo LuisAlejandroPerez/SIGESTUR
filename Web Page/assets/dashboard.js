@@ -43,6 +43,9 @@ let currentUser = null;
 let gpsDataListener = null;
 let isTrafficVisible = false;
 
+// Track bus status for breakdown notifications
+const previousBusStatuses = new Map();
+
 // Santo Domingo coordinates
 const SANTO_DOMINGO_CENTER = { lat: 18.4861, lng: -69.9312 };
 
@@ -833,6 +836,7 @@ function processBusData(gpsData) {
   console.log('Processing bus data...');
   const activeBuses = [];
   const brokenBuses = [];
+  const currentBusStatuses = new Map();
 
   // Clear existing bus markers
   busMarkers.forEach((marker) => marker.setMap(null));
@@ -869,6 +873,19 @@ function processBusData(gpsData) {
         (busData.latitude === 0 && busData.longitude === 0) ||
         busData.timestamp === 0;
 
+      // Track current status
+      currentBusStatuses.set(busId, isBroken ? 'broken' : 'active');
+
+      // Check for status change (active -> broken)
+      const previousStatus = previousBusStatuses.get(busId);
+      if (previousStatus === 'active' && isBroken) {
+        // Bus just broke down - show notification
+        showBreakdownNotification(busId);
+      } else if (previousStatus === 'broken' && !isBroken) {
+        // Bus is back online - show recovery notification
+        showRecoveryNotification(busId);
+      }
+
       const busInfo = {
         id: busId,
         tripId,
@@ -887,6 +904,12 @@ function processBusData(gpsData) {
     });
   });
 
+  // Update previous statuses for next comparison
+  previousBusStatuses.clear();
+  currentBusStatuses.forEach((status, busId) => {
+    previousBusStatuses.set(busId, status);
+  });
+
   console.log(
     `Processed ${activeBuses.length} active buses, ${brokenBuses.length} broken buses`
   );
@@ -895,6 +918,18 @@ function processBusData(gpsData) {
   updateBusCounters(activeBuses.length, brokenBuses.length);
   updateBusList(activeBuses, brokenBuses);
   updateAlerts(brokenBuses);
+}
+
+// Show breakdown notification
+function showBreakdownNotification(busId) {
+  console.log(`🚨 Bus ${busId} broke down!`);
+  showAlert(`OMSA ${busId} está averiada`, 'breakdown');
+}
+
+// Show recovery notification
+function showRecoveryNotification(busId) {
+  console.log(`✅ Bus ${busId} is back online!`);
+  showAlert(`OMSA ${busId} está de vuelta en línea`, 'recovery');
 }
 
 // Create bus marker on map using FontAwesome icon
@@ -994,7 +1029,7 @@ function showBusInfo(busInfo) {
   // Update modal title with appropriate icon
   const modalTitle = modal.querySelector('#modal-title');
   if (modalTitle) {
-    modalTitle.innerHTML = '🚌 Información de la OMSA';
+    modalTitle.innerHTML = `🚌 Información de la OMSA`;
   }
 
   content.innerHTML = `
@@ -1328,6 +1363,10 @@ function getAlertColor(type) {
       return '#FF9800';
     case 'info':
       return '#2196F3';
+    case 'breakdown':
+      return '#F44336'; // Red for breakdown notifications
+    case 'recovery':
+      return '#4CAF50'; // Green for recovery notifications
     default:
       return '#F44336';
   }
