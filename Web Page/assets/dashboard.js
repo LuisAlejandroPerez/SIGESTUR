@@ -4,9 +4,13 @@ import { gtfsService } from './services/gtfs-service.js';
 import { mapService } from './services/map-service.js';
 import { busService } from './services/bus-service.js';
 import { uiManager } from './ui/ui-manager.js';
+import { reportService } from './services/report-service.js'; // Import the new service
 
 // Application state
 let currentUser = null;
+let currentActiveBuses = [];
+let currentBrokenBuses = [];
+let currentGtfsData = null;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
@@ -93,6 +97,12 @@ function setupEventListeners() {
     centerMapBtn.addEventListener('click', centerMap);
   }
 
+  // Download Report button
+  const downloadReportBtn = document.getElementById('download-report-btn');
+  if (downloadReportBtn) {
+    downloadReportBtn.addEventListener('click', handleDownloadReport);
+  }
+
   // Controls panel toggle
   setupControlsPanel();
 
@@ -175,6 +185,22 @@ async function handleLogout() {
   }
 }
 
+// Handle download report
+async function handleDownloadReport() {
+  if (!currentActiveBuses || !currentBrokenBuses || !currentGtfsData) {
+    uiManager.showAlert(
+      'Datos no disponibles para generar el reporte. Intente de nuevo en unos segundos.',
+      'warning'
+    );
+    return;
+  }
+  await reportService.generateStatisticsReport(
+    currentActiveBuses,
+    currentBrokenBuses,
+    currentGtfsData
+  );
+}
+
 // Start real-time bus data listener
 function startRealtimeDataListener() {
   console.log('Starting real-time bus data listener...');
@@ -182,6 +208,8 @@ function startRealtimeDataListener() {
   firebaseService.startGPSDataListener((gpsData) => {
     if (gpsData) {
       const { activeBuses, brokenBuses } = busService.processBusData(gpsData);
+      currentActiveBuses = activeBuses; // Store for report
+      currentBrokenBuses = brokenBuses; // Store for report
 
       // Update UI
       uiManager.updateBusCounters(activeBuses.length, brokenBuses.length);
@@ -189,6 +217,8 @@ function startRealtimeDataListener() {
       uiManager.updateAlerts(brokenBuses);
     } else {
       console.log('No GPS data available');
+      currentActiveBuses = [];
+      currentBrokenBuses = [];
       uiManager.updateBusCounters(0, 0);
       uiManager.updateBusList([], []);
       uiManager.updateAlerts([]);
@@ -204,17 +234,17 @@ async function loadGTFSDataAsync() {
     const result = await gtfsService.loadGTFSData();
 
     // Update stops counter
-    const gtfsData = gtfsService.getGTFSData();
-    uiManager.updateStopsCounter(gtfsData.stops.length);
+    currentGtfsData = gtfsService.getGTFSData(); // Store for report
+    uiManager.updateStopsCounter(currentGtfsData.stops.length);
 
     // Load stops on map if map is ready
-    if (mapService.isMapReady() && gtfsData.stops.length > 0) {
+    if (mapService.isMapReady() && currentGtfsData.stops.length > 0) {
       mapService.loadStopsOnMap();
     }
 
     if (result.success) {
       uiManager.showAlert(
-        `GTFS cargado: ${gtfsData.stops.length} paradas, ${gtfsData.routes.length} rutas`,
+        `GTFS cargado: ${currentGtfsData.stops.length} paradas, ${currentGtfsData.routes.length} rutas`,
         'success'
       );
     } else {
@@ -331,12 +361,14 @@ function setupGlobalFunctions() {
     refreshData: loadGTFSDataAsync,
     centerMap,
     toggleTraffic,
+    generateReport: handleDownloadReport, // Expose for debugging
     services: {
       firebase: firebaseService,
       gtfs: gtfsService,
       map: mapService,
       bus: busService,
       ui: uiManager,
+      report: reportService,
     },
   };
 }

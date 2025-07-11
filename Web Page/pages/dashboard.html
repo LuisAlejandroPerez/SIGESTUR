@@ -21,6 +21,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </head>
   <body>
     <!-- Header -->
@@ -103,6 +105,13 @@
               title="Centrar mapa en Santo Domingo"
             >
               📍 Centrar Mapa
+            </button>
+            <button
+              id="download-report-btn"
+              class="control-btn"
+              title="Descargar reporte de estadísticas"
+            >
+              📄 Descargar Reporte
             </button>
           </div>
           <button
