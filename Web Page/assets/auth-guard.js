@@ -22,7 +22,7 @@ const auth = getAuth(app);
 // Verificar si hay usuario logueado
 onAuthStateChanged(auth, (user) => {
   if (!user) {
-    // Si no está autenticado, redirige al login
+    // Si no esta autenticado, redirige al login
     window.location.href = '../index.html';
   } else {
     // Mostrar el correo del usuario

@@ -1,18 +1,18 @@
-// Main Dashboard Controller - Orchestrates all services
+// Importar componentes necesario para hacer funcionar el codigo
 import { firebaseService } from './services/firebase-service.js';
 import { gtfsService } from './services/gtfs-service.js';
 import { mapService } from './services/map-service.js';
 import { busService } from './services/bus-service.js';
 import { uiManager } from './ui/ui-manager.js';
-import { reportService } from './services/report-service.js'; // Import the new service
+import { reportService } from './services/report-service.js';
 
-// Application state
+// Estado de la aplicacion
 let currentUser = null;
 let currentActiveBuses = [];
 let currentBrokenBuses = [];
 let currentGtfsData = null;
 
-// Initialize the application
+// Inicializar la aplicacion
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Initializing SIGESTUR Dashboard...');
   initializeAuth();
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupGlobalFunctions();
 });
 
-// Authentication initialization
+// Inicializacion de la autenticacion
 function initializeAuth() {
   firebaseService.onAuthStateChanged((user) => {
     if (!user) {
@@ -36,26 +36,26 @@ function initializeAuth() {
   });
 }
 
-// Main application initialization
+// Inicializacion de la aplicacion principal
 async function initializeApplication() {
   try {
     console.log('Starting application initialization...');
 
-    // Setup bus service callbacks for notifications
+    // Callbacks para notificaciones
     busService.setNotificationCallbacks(
       (busId) =>
-        uiManager.showAlert(`OMSA ${busId} está averiada`, 'breakdown'),
+        uiManager.showAlert(`OMSA ${busId} esta averiada`, 'breakdown'),
       (busId) =>
-        uiManager.showAlert(`OMSA ${busId} está de vuelta en línea`, 'recovery')
+        uiManager.showAlert(`OMSA ${busId} esta de vuelta en linea`, 'recovery')
     );
 
-    // Start real-time bus data listener (priority)
+    // Inicar real-time bus data listener (prioridad)
     startRealtimeDataListener();
 
-    // Load GTFS data in background
+    // Carga la data GTFS en segundo plano
     loadGTFSDataAsync();
 
-    // Initialize map (will wait for Google Maps API if needed)
+    // Inicializar mapa (Espera la API de Google Maps si es necesario)
     initializeMapWhenReady();
   } catch (error) {
     console.error('Error initializing application:', error);
@@ -63,9 +63,9 @@ async function initializeApplication() {
   }
 }
 
-// Initialize map when ready
+// Inicializar mapa cuando este listo
 function initializeMapWhenReady() {
-  // Try to initialize immediately
+  // Trata de inicializarlo inmediatemiente
   if (typeof window.google !== 'undefined' && window.google.maps) {
     const success = mapService.initializeMap();
     if (success) {
@@ -74,7 +74,7 @@ function initializeMapWhenReady() {
     }
   }
 
-  // If not ready, the mapService will handle waiting for Google Maps
+  // Sino esta listo, el mapService va a manejar la espera por Google Maps
   console.log('Google Maps not ready, mapService will wait for it');
 }
 
@@ -86,7 +86,7 @@ function setupEventListeners() {
     logoutBtn.addEventListener('click', handleLogout);
   }
 
-  // Map controls
+  // Controles del mapa
   const refreshBtn = document.getElementById('refresh-btn');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', toggleTraffic);
@@ -97,7 +97,7 @@ function setupEventListeners() {
     centerMapBtn.addEventListener('click', centerMap);
   }
 
-  // Download Report button
+  // Boton para descargar el reporte
   const downloadReportBtn = document.getElementById('download-report-btn');
   if (downloadReportBtn) {
     downloadReportBtn.addEventListener('click', handleDownloadReport);
@@ -110,7 +110,7 @@ function setupEventListeners() {
   setupKeyboardShortcuts();
 }
 
-// Setup controls panel functionality
+// Configurar la funcionalidad del panel de controles
 function setupControlsPanel() {
   const controlsTab = document.getElementById('controls-tab');
   const controlsPanel = document.getElementById('controls-panel');
@@ -118,7 +118,7 @@ function setupControlsPanel() {
   if (controlsTab && controlsPanel) {
     controlsTab.addEventListener('click', toggleControlsPanel);
 
-    // Close panel when clicking outside
+    // Cerrar el panel al hacer clic afuera
     document.addEventListener('click', (e) => {
       if (
         !controlsTab.contains(e.target) &&
@@ -130,10 +130,10 @@ function setupControlsPanel() {
   }
 }
 
-// Setup keyboard shortcuts
+// Configurar keyboard shortcuts
 function setupKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
-    // Ctrl/Cmd + M for map controls toggle
+    // Ctrl/Cmd + M para alternar los controles del mapa
     if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
       e.preventDefault();
       toggleControlsPanel();
@@ -141,7 +141,7 @@ function setupKeyboardShortcuts() {
   });
 }
 
-// Controls panel management
+// Gestion del panel de control
 function toggleControlsPanel() {
   const controlsPanel = document.getElementById('controls-panel');
   if (controlsPanel.classList.contains('active')) {
@@ -171,10 +171,10 @@ function closeControlsPanel() {
   controlsTab.title = 'Controles del mapa';
 }
 
-// Handle logout
+// Manejar el cierre de sesion
 async function handleLogout() {
   try {
-    // Clean up services
+    // Servicios de limpieza
     firebaseService.cleanup();
 
     await firebaseService.signOut();
@@ -185,7 +185,7 @@ async function handleLogout() {
   }
 }
 
-// Handle download report
+// Gestionar informe de descarga
 async function handleDownloadReport() {
   if (!currentActiveBuses || !currentBrokenBuses || !currentGtfsData) {
     uiManager.showAlert(
@@ -201,17 +201,17 @@ async function handleDownloadReport() {
   );
 }
 
-// Start real-time bus data listener
+// Iniciar real-time bus data listener
 function startRealtimeDataListener() {
   console.log('Starting real-time bus data listener...');
 
   firebaseService.startGPSDataListener((gpsData) => {
     if (gpsData) {
       const { activeBuses, brokenBuses } = busService.processBusData(gpsData);
-      currentActiveBuses = activeBuses; // Store for report
-      currentBrokenBuses = brokenBuses; // Store for report
+      currentActiveBuses = activeBuses; // Guardar para informe
+      currentBrokenBuses = brokenBuses; // Guardar para informe
 
-      // Update UI
+      // Actualiza la UI
       uiManager.updateBusCounters(activeBuses.length, brokenBuses.length);
       uiManager.updateBusList(activeBuses, brokenBuses);
       uiManager.updateAlerts(brokenBuses);
@@ -226,7 +226,7 @@ function startRealtimeDataListener() {
   });
 }
 
-// Load GTFS data asynchronously
+// Cargar datos GTFS de forma asincronica
 async function loadGTFSDataAsync() {
   try {
     uiManager.showAlert('Cargando datos GTFS...', 'info');
@@ -234,10 +234,10 @@ async function loadGTFSDataAsync() {
     const result = await gtfsService.loadGTFSData();
 
     // Update stops counter
-    currentGtfsData = gtfsService.getGTFSData(); // Store for report
+    currentGtfsData = gtfsService.getGTFSData(); // Guardar para informe
     uiManager.updateStopsCounter(currentGtfsData.stops.length);
 
-    // Load stops on map if map is ready
+    // Cargar paradas en el mapa si el mapa esta listo
     if (mapService.isMapReady() && currentGtfsData.stops.length > 0) {
       mapService.loadStopsOnMap();
     }
@@ -262,7 +262,7 @@ async function loadGTFSDataAsync() {
   }
 }
 
-// Toggle traffic layer
+// Activar o desactivar la capa de trafico
 function toggleTraffic() {
   try {
     if (!mapService.isMapReady()) {
@@ -289,7 +289,7 @@ function toggleTraffic() {
   }
 }
 
-// Center map
+// Centrar el mapa
 function centerMap() {
   try {
     if (!mapService.isMapReady()) {
@@ -312,16 +312,16 @@ function centerMap() {
   }
 }
 
-// Setup global functions for HTML and debugging
+// Configurar funciones globales para HTML y debugging
 function setupGlobalFunctions() {
-  // Google Maps initialization callback
+  // inicializacion de Google Maps callback
   window.dashboardInitMap = () => {
     try {
       const success = mapService.initializeMap();
       if (success) {
         console.log('Google Maps initialized successfully via callback');
 
-        // Load stops if GTFS data is available
+        // La carga se detiene si hay datos GTFS disponibles
         const gtfsData = gtfsService.getGTFSData();
         if (gtfsData && gtfsData.stops.length > 0) {
           mapService.loadStopsOnMap();
@@ -335,7 +335,7 @@ function setupGlobalFunctions() {
     }
   };
 
-  // Global function for focusing on bus (used by UI)
+  // Funcion global para enfocar el bus (usada por la UI)
   window.focusOnBus = (busId) => {
     const success = busService.focusOnBus(busId);
     if (!success) {
@@ -343,15 +343,15 @@ function setupGlobalFunctions() {
     }
   };
 
-  // Global function for showing bus info modal (used by services)
+  // Funcion global para mostrar información modal del bus (utilizada por los servicios)
   window.showBusInfoModal = (busInfo) => {
     uiManager.showBusInfo(busInfo);
   };
 
-  // Make uiManager globally available for map service
+  // Hacer que uiManager este disponible globalmente para el servicio de maps
   window.uiManager = uiManager;
 
-  // Debug functions
+  // Funcion de Debug
   window.debugDashboard = {
     gtfsData: () => gtfsService.getGTFSData(),
     busMarkers: () => mapService.getBusMarkers(),
@@ -373,7 +373,7 @@ function setupGlobalFunctions() {
   };
 }
 
-// Handle page visibility changes
+// Gestionar cambios de visibilidad de la pagina
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     console.log('Page hidden - reducing update frequency');
@@ -382,7 +382,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// Handle window resize for responsive map
+// Manejar el cambio de tamano de la ventana para un mapa responsivo
 window.addEventListener('resize', () => {
   const map = mapService.getMap();
   if (map && window.google) {
@@ -390,7 +390,7 @@ window.addEventListener('resize', () => {
   }
 });
 
-// Global error handling
+// Manejo global de errores
 window.addEventListener('error', (event) => {
   console.error('Uncaught error:', event.error);
   uiManager.showAlert('Ha ocurrido un error inesperado');
@@ -401,7 +401,7 @@ window.addEventListener('unhandledrejection', (event) => {
   uiManager.showAlert('Error de conexión - verificando...');
 });
 
-// Filter out browser extension errors
+// Filtrar errores de extensiones del navegador
 const originalConsoleError = console.error;
 console.error = (...args) => {
   const message = args.join(' ');
@@ -410,7 +410,7 @@ console.error = (...args) => {
     message.includes('runtime/sendMessage') ||
     message.includes('kwift.CHROME.js')
   ) {
-    return; // Ignore browser extension errors
+    return; // Ignorar los errores de extensión del navegador
   }
   originalConsoleError.apply(console, args);
 };

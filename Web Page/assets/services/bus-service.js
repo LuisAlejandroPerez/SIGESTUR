@@ -19,7 +19,7 @@ export class BusService {
     const brokenBuses = [];
     const currentBusStatuses = new Map();
 
-    // Clear existing bus markers
+    // Borrar los marcadores existentes
     mapService.clearBusMarkers();
 
     if (!gpsData) {
@@ -27,7 +27,7 @@ export class BusService {
       return { activeBuses, brokenBuses };
     }
 
-    // Process each trip
+    // Procesar cada viaje
     Object.keys(gpsData).forEach((tripId) => {
       console.log(`Processing trip: ${tripId}`);
       const tripData = gpsData[tripId];
@@ -35,7 +35,7 @@ export class BusService {
       Object.keys(tripData).forEach((busId) => {
         const busData = tripData[busId];
 
-        // Get trip information from GTFS data (if available)
+        // Obtener informacion del viaje a partir de los datos GTFS (si esta disponible)
         const gtfsData = gtfsService.getGTFSData();
         const tripInfo =
           gtfsData && gtfsData.trips
@@ -54,21 +54,21 @@ export class BusService {
           routeInfo
         );
 
-        // Check if bus is broken (coordinates are 0,0 or timestamp is 0)
+        // Comprobar si el bus esta averiado (las coordenadas son 0,0 o la marca de tiempo es 0)
         const isBroken =
           (busData.latitude === 0 && busData.longitude === 0) ||
           busData.timestamp === 0;
 
-        // Track current status
+        // Track del estado actual
         currentBusStatuses.set(busId, isBroken ? 'broken' : 'active');
 
-        // Check for status change (active -> broken)
+        // Comprobar cambio de estado (activa -> averiada)
         const previousStatus = this.previousBusStatuses.get(busId);
         if (previousStatus === 'active' && isBroken) {
-          // Bus just broke down - show notification
+          // Mostrar notificacion - OMSA averiada
           this.showBreakdownNotification(busId);
         } else if (previousStatus === 'broken' && !isBroken) {
-          // Bus is back online - show recovery notification
+          // Mostrar notificacion - OMSA volvio a estar online
           this.showRecoveryNotification(busId);
         }
 
@@ -85,9 +85,9 @@ export class BusService {
           brokenBuses.push(busInfo);
         } else {
           activeBuses.push(busInfo);
-          // Create marker with callback for showing bus info
+          // Crear un marcador con callback para mostrar informacion del bus
           mapService.createBusMarker(busInfo, (busInfo) => {
-            // This callback will be handled by the main dashboard
+            // Este callback sera menajo por el main dashboard
             if (window.showBusInfoModal) {
               window.showBusInfoModal(busInfo);
             }
@@ -96,7 +96,7 @@ export class BusService {
       });
     });
 
-    // Update previous statuses for next comparison
+    // Actualizar estados anteriores para la proxima comparacion
     this.previousBusStatuses.clear();
     currentBusStatuses.forEach((status, busId) => {
       this.previousBusStatuses.set(busId, status);
@@ -128,5 +128,5 @@ export class BusService {
   }
 }
 
-// Create singleton instance
+// Instancia singleton
 export const busService = new BusService();

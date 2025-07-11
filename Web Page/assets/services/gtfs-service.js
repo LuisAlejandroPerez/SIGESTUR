@@ -13,7 +13,7 @@ export class GTFSService {
     try {
       console.log('Loading GTFS data from Firebase Storage...');
 
-      // Define the GTFS files to load
+      // Define los archivos GTFS a cargar
       const gtfsFiles = [
         { name: 'stops', path: 'STATIC GTFS/stops.txt' },
         { name: 'routes', path: 'STATIC GTFS/routes.txt' },
@@ -23,7 +23,7 @@ export class GTFSService {
       const gtfsResults = {};
       let successCount = 0;
 
-      // Try to load each file
+      // Intente cargar cada archivo
       for (const file of gtfsFiles) {
         try {
           console.log(`Attempting to load ${file.name} from ${file.path}...`);
@@ -39,7 +39,7 @@ export class GTFSService {
         }
       }
 
-      // Parse successfully loaded data
+      // Analizar datos cargados correctamente
       if (gtfsResults.stops) {
         const parsedStops = this.parseGTFSStops(gtfsResults.stops);
         if (parsedStops.length > 0) {
@@ -78,7 +78,7 @@ export class GTFSService {
       const downloadURL = await firebaseService.getFileDownloadURL(filePath);
       console.log(`Got download URL for ${filePath}:`, downloadURL);
 
-      // Try fetch with different CORS modes
+      // Intente buscar con diferentes modos CORS
       const corsOptions = [
         { mode: 'cors', credentials: 'omit' },
         { mode: 'no-cors' },
@@ -274,5 +274,5 @@ export class GTFSService {
   }
 }
 
-// Create singleton instance
+// Instancia singleton
 export const gtfsService = new GTFSService();

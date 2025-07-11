@@ -20,7 +20,7 @@ export class FirebaseService {
     this.gpsDataListener = null;
   }
 
-  // Authentication methods
+  // Metodos de autenticacion
   onAuthStateChanged(callback) {
     return onAuthStateChanged(auth, callback);
   }
@@ -66,7 +66,7 @@ export class FirebaseService {
     }
   }
 
-  // Storage methods
+  // Metodos de almacenamiento
   async getFileDownloadURL(filePath) {
     try {
       const fileRef = storageRef(storage, filePath);
@@ -84,5 +84,5 @@ export class FirebaseService {
   }
 }
 
-// Create singleton instance
+// Instancia singleton
 export const firebaseService = new FirebaseService();

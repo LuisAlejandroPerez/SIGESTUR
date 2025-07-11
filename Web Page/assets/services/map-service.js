@@ -20,10 +20,10 @@ export class MapService {
     }
 
     try {
-      // Check if google is available
+      // Verifica si Google esta disponible
       if (typeof window.google === 'undefined' || !window.google.maps) {
         console.error('Google Maps API not loaded');
-        // Try to wait for Google Maps to load
+        // Intente esperar a que se cargue Google Maps
         this.waitForGoogleMaps();
         return false;
       }
@@ -38,13 +38,13 @@ export class MapService {
         zoomControl: true,
       });
 
-      // Initialize traffic layer
+      // Inicializar la capa de trafico
       this.trafficLayer = new window.google.maps.TrafficLayer();
       this.isInitialized = true;
 
       console.log('Google Maps initialized successfully');
 
-      // Load stops if GTFS data is available
+      // La carga se detiene si hay datos GTFS disponibles
       const gtfsData = gtfsService.getGTFSData();
       if (gtfsData && gtfsData.stops) {
         this.loadStopsOnMap();
@@ -61,7 +61,7 @@ export class MapService {
   waitForGoogleMaps() {
     console.log('Waiting for Google Maps API to load...');
     let attempts = 0;
-    const maxAttempts = 50; // 10 seconds max wait
+    const maxAttempts = 50; // 10 segundos de espera maximo
 
     const checkGoogle = () => {
       attempts++;
@@ -95,7 +95,7 @@ export class MapService {
     const gtfsData = gtfsService.getGTFSData();
     if (!gtfsData || !gtfsData.stops) return;
 
-    // Clear existing stop markers
+    // Borrar los marcadores de parada existentes
     this.stopMarkers.forEach((marker) => marker.setMap(null));
     this.stopMarkers.clear();
 
@@ -119,7 +119,7 @@ export class MapService {
           },
         });
 
-        // Add info window for stop
+        // Añadir ventana de informacion para la parada
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
             <div style="padding: 10px;">
@@ -167,13 +167,13 @@ export class MapService {
       lng: Number.parseFloat(busData.longitude),
     };
 
-    // Validate coordinates
+    // Validar coordenadas
     if (isNaN(position.lat) || isNaN(position.lng)) {
       console.warn(`Invalid coordinates for bus ${busId}:`, position);
       return;
     }
 
-    // Use green for active buses, red for broken buses
+    // Uitlizar verde para las OMSAS activas y rojo para las averiadas
     const iconColor = isBroken ? '#F44336' : '#4CAF50';
 
     try {
@@ -190,7 +190,7 @@ export class MapService {
         },
       });
 
-      // Add click listener to show bus info
+      // Agregar un click listener para mostrar la info de esa OMSA
       marker.addListener('click', () => {
         if (onClickCallback) {
           onClickCallback(busInfo);
@@ -254,7 +254,7 @@ export class MapService {
     return false;
   }
 
-  // Utility methods
+  // Metodos de utilidad
   isMapReady() {
     return this.isInitialized && !!this.map;
   }
@@ -272,5 +272,5 @@ export class MapService {
   }
 }
 
-// Create singleton instance
+// Instancia singleton
 export const mapService = new MapService();

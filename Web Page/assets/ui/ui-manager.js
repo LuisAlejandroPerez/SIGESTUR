@@ -41,23 +41,23 @@ export class UIManager {
     const busesList = document.getElementById('buses-list');
     if (!busesList) return;
 
-    // Store current search value if exists
+    // Almacenar el valor de busqueda actual si existe
     const existingSearch = busesList.querySelector('input[type="text"]');
     const currentSearchValue = existingSearch ? existingSearch.value : '';
 
-    // Clear and add search input
+    // Borrar y agregar entrada de busqueda
     busesList.innerHTML = '';
 
-    // Add search functionality
+    // Añadir funcionalidad de busqueda
     const searchContainer = this.createSearchContainer();
     const searchInput = searchContainer.querySelector('input');
-    searchInput.value = currentSearchValue; // Restore previous search
+    searchInput.value = currentSearchValue; // Restaurar busqueda anterior
 
     busesList.appendChild(searchContainer);
 
-    // Filter and display function
+    //Funcion de filtro y visualización
     const displayBuses = (searchTerm = '') => {
-      // Clear existing bus items and messages (keep search)
+      // Borrar elementos y mensajes de OMSAS existentes (mantener la busqueda)
       const busItems = busesList.querySelectorAll('.bus-item');
       const noResultsMessages = busesList.querySelectorAll(
         '.no-results-message'
@@ -66,18 +66,18 @@ export class UIManager {
       busItems.forEach((item) => item.remove());
       noResultsMessages.forEach((msg) => msg.remove());
 
-      // Filter active buses based on search
+      // Filtrar OMSAS activas segun la busqueda
       const filteredBuses = activeBuses.filter((busInfo) =>
         busInfo.id.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-      // Add filtered active buses only
+      // Agregar solo OMSAS activas filtradas
       filteredBuses.forEach((busInfo) => {
         const busItem = this.createBusListItem(busInfo, false);
         busesList.appendChild(busItem);
       });
 
-      // Show message if no buses match
+      // Mostrar mensaje si no hay OMSAS que coincidan
       if (filteredBuses.length === 0) {
         const noResultsMsg = document.createElement('p');
         noResultsMsg.className = 'no-results-message';
@@ -99,7 +99,7 @@ export class UIManager {
       }, 300); // 300ms debounce
     });
 
-    // Initial display with current search value
+    // Pantalla inicial con el valor de busqueda actual
     displayBuses(currentSearchValue);
   }
 
@@ -217,10 +217,10 @@ export class UIManager {
     // Get modal content element to add appropriate class
     const modalContent = modal.querySelector('.modal-content');
 
-    // Remove existing bus status classes
+    // Eliminar las clases de estado de bus existentes
     modalContent.classList.remove('bus-active', 'bus-broken');
 
-    // Add appropriate class based on bus status
+    // Agregue la clase apropiada segun el estado del autobus
     if (isBroken) {
       modalContent.classList.add('bus-broken');
     } else {
@@ -243,7 +243,7 @@ export class UIManager {
       id: 'N/A',
     };
 
-    // Update modal title with appropriate icon
+    // Actualizar el título modal con el icono apropiado
     const modalTitle = modal.querySelector('#modal-title');
     if (modalTitle) {
       modalTitle.innerHTML = `🚌 Información de la OMSA`;
@@ -329,7 +329,7 @@ export class UIManager {
 
     modal.style.display = 'block';
 
-    // Add smooth scroll behavior to modal content
+    // Comportamiento de desplazamiento suave al contenido modal
     modalContent.style.scrollBehavior = 'smooth';
   }
 
@@ -341,11 +341,11 @@ export class UIManager {
   }
 
   showAlert(message, type = 'error') {
-    // Remove existing alerts
+    // Eliminar alertas existentes
     const existingAlerts = document.querySelectorAll('.temp-alert');
     existingAlerts.forEach((alert) => alert.remove());
 
-    // Create new alert
+    // Crear nueva alerta
     const alertDiv = document.createElement('div');
     alertDiv.className = 'temp-alert';
     alertDiv.style.cssText = `
@@ -367,7 +367,7 @@ export class UIManager {
 
     document.body.appendChild(alertDiv);
 
-    // Auto remove after 4 seconds
+    // Eliminacion automatica despues de 4seg
     setTimeout(() => {
       if (alertDiv.parentNode) {
         alertDiv.remove();
@@ -384,14 +384,14 @@ export class UIManager {
       case 'info':
         return '#2196F3';
       case 'breakdown':
-        return '#F44336'; // Red for breakdown notifications
+        return '#F44336'; // Roja para las notificaciones de averia
       case 'recovery':
-        return '#4CAF50'; // Green for recovery notifications
+        return '#4CAF50'; // Verde para notificaciones de recuperacion
       default:
         return '#F44336';
     }
   }
 }
 
-// Create singleton instance
+// Instancia singleton
 export const uiManager = new UIManager();

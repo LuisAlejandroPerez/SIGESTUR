@@ -26,7 +26,7 @@ const usernameField = document.getElementById('username-field');
 const passwordField = document.getElementById('password-field');
 const submitButton = document.getElementById('login-form-submit');
 
-// Función para mostrar el mensaje de error
+// Funcion para mostrar el mensaje de error
 function showError(message = 'Usuario o Contraseña Invalido') {
   loginErrorMsg.textContent = message;
   loginErrorMsg.classList.add('show');
@@ -35,20 +35,20 @@ function showError(message = 'Usuario o Contraseña Invalido') {
   usernameField.classList.add('error');
   passwordField.classList.add('error');
 
-  // Remover el mensaje después de 5 segundos
+  // Remover el mensaje despues de 5 segundos
   setTimeout(() => {
     hideError();
   }, 5000);
 }
 
-// Función para ocultar el mensaje de error
+// Funcion para ocultar el mensaje de error
 function hideError() {
   loginErrorMsg.classList.remove('show');
   usernameField.classList.remove('error');
   passwordField.classList.remove('error');
 }
 
-// Función para limpiar errores cuando el usuario empiece a escribir
+// Funcion para limpiar errores cuando el usuario empiece a escribir
 function clearErrorsOnInput() {
   hideError();
 }
@@ -63,13 +63,13 @@ loginForm.addEventListener('submit', (e) => {
   const email = loginForm.username.value.trim();
   const password = loginForm.password.value;
 
-  // Validación básica
+  // Validacion basica
   if (!email || !password) {
     showError('Por favor, llenar todos los campos');
     return;
   }
 
-  // Deshabilitar el botón durante el proceso
+  // Deshabilitar el boton durante el proceso
   submitButton.disabled = true;
   submitButton.textContent = 'Logging in...';
 
@@ -85,7 +85,7 @@ loginForm.addEventListener('submit', (e) => {
     .catch((error) => {
       console.error('Error de inicio de sesion:', error.message);
 
-      // Mostrar mensaje de error específico basado en el código de error
+      // Mostrar mensaje de error especifico basado en el codigo de error
       let errorMessage = 'Usuario o Contraseña Invalido';
 
       switch (error.code) {

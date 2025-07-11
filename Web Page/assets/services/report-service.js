@@ -2,7 +2,7 @@ import { uiManager } from '../ui/ui-manager.js';
 
 export class ReportService {
   constructor() {
-    // Ensure jsPDF is loaded
+    // Asegurar de que jsPDF este cargado
     if (
       typeof window.jspdf === 'undefined' ||
       typeof window.jspdf.jsPDF === 'undefined'
@@ -29,9 +29,9 @@ export class ReportService {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
 
-      let y = 20; // Initial Y position
+      let y = 20; // Posicion inicial Y
 
-      // Title
+      // Titulo
       doc.setFontSize(22);
       doc.text(
         'Reporte de Estadísticas de OMSAs',
@@ -43,7 +43,7 @@ export class ReportService {
       );
       y += 10;
 
-      // Date
+      // Fecha
       doc.setFontSize(10);
       doc.text(
         `Fecha de Generación: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
@@ -55,7 +55,7 @@ export class ReportService {
       );
       y += 20;
 
-      // Summary
+      // Resumen
       doc.setFontSize(16);
       doc.text('Resumen General', 20, y);
       y += 10;
@@ -73,7 +73,7 @@ export class ReportService {
       doc.text(`Total de Rutas Registradas: ${gtfsData.routes.length}`, 20, y);
       y += 15;
 
-      // Broken Buses Section
+      // Seccion de OMSAS averiadas
       if (brokenBuses.length > 0) {
         doc.setFontSize(16);
         doc.text('OMSA Averiadas', 20, y);
@@ -82,7 +82,7 @@ export class ReportService {
 
         brokenBuses.forEach((bus, index) => {
           if (y > 280) {
-            // Check if new page is needed
+            // Comprobar si se necesita una nueva pagina
             doc.addPage();
             y = 20;
             doc.setFontSize(16);
@@ -127,4 +127,5 @@ export class ReportService {
   }
 }
 
+//nstancia singleton
 export const reportService = new ReportService();
