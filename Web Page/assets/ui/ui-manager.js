@@ -41,23 +41,23 @@ export class UIManager {
     const busesList = document.getElementById('buses-list');
     if (!busesList) return;
 
-    // Almacenar el valor de busqueda actual si existe
+    // Store current search value if exists
     const existingSearch = busesList.querySelector('input[type="text"]');
     const currentSearchValue = existingSearch ? existingSearch.value : '';
 
-    // Borrar y agregar entrada de busqueda
+    // Clear and add search input
     busesList.innerHTML = '';
 
-    // Añadir funcionalidad de busqueda
+    // Add search functionality
     const searchContainer = this.createSearchContainer();
     const searchInput = searchContainer.querySelector('input');
-    searchInput.value = currentSearchValue; // Restaurar busqueda anterior
+    searchInput.value = currentSearchValue; // Restore previous search
 
     busesList.appendChild(searchContainer);
 
-    //Funcion de filtro y visualización
+    // Filter and display function
     const displayBuses = (searchTerm = '') => {
-      // Borrar elementos y mensajes de OMSAS existentes (mantener la busqueda)
+      // Clear existing bus items and messages (keep search)
       const busItems = busesList.querySelectorAll('.bus-item');
       const noResultsMessages = busesList.querySelectorAll(
         '.no-results-message'
@@ -66,18 +66,18 @@ export class UIManager {
       busItems.forEach((item) => item.remove());
       noResultsMessages.forEach((msg) => msg.remove());
 
-      // Filtrar OMSAS activas segun la busqueda
+      // Filter active buses based on search
       const filteredBuses = activeBuses.filter((busInfo) =>
         busInfo.id.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-      // Agregar solo OMSAS activas filtradas
+      // Add filtered active buses only
       filteredBuses.forEach((busInfo) => {
         const busItem = this.createBusListItem(busInfo, false);
         busesList.appendChild(busItem);
       });
 
-      // Mostrar mensaje si no hay OMSAS que coincidan
+      // Show message if no buses match
       if (filteredBuses.length === 0) {
         const noResultsMsg = document.createElement('p');
         noResultsMsg.className = 'no-results-message';
@@ -99,7 +99,7 @@ export class UIManager {
       }, 300); // 300ms debounce
     });
 
-    // Pantalla inicial con el valor de busqueda actual
+    // Initial display with current search value
     displayBuses(currentSearchValue);
   }
 
@@ -133,7 +133,7 @@ export class UIManager {
   }
 
   createBusListItem(busInfo, isBroken) {
-    const { id: busId, tripId, routeInfo } = busInfo;
+    const { id: busId, routeInfo } = busInfo; // Use routeInfo directly
 
     const item = document.createElement('div');
     item.className = `bus-item ${isBroken ? 'broken' : ''}`;
@@ -142,7 +142,7 @@ export class UIManager {
         <div class="bus-id">OMSA ${busId}</div>
         ${
           routeInfo
-            ? `<div style="font-size: 0.8rem; color: var(--text-muted);">${routeInfo.shortName}</div>`
+            ? `<div style="font-size: 0.8rem; color: var(--text-muted);">Ruta: ${routeInfo.shortName}</div>`
             : ''
         }
       </div>
@@ -197,14 +197,7 @@ export class UIManager {
   }
 
   showBusInfo(busInfo) {
-    const {
-      id: busId,
-      tripId,
-      data: busData,
-      tripInfo,
-      routeInfo,
-      isBroken,
-    } = busInfo;
+    const { id: busId, data: busData, tripInfo, routeInfo, isBroken } = busInfo;
 
     const modal = document.getElementById('bus-modal');
     const content = document.getElementById('bus-info-content');
@@ -217,18 +210,21 @@ export class UIManager {
     // Get modal content element to add appropriate class
     const modalContent = modal.querySelector('.modal-content');
 
-    // Eliminar las clases de estado de bus existentes
+    // Remove existing bus status classes
     modalContent.classList.remove('bus-active', 'bus-broken');
 
-    // Agregue la clase apropiada segun el estado del autobus
+    // Add appropriate class based on bus status
     if (isBroken) {
       modalContent.classList.add('bus-broken');
     } else {
       modalContent.classList.add('bus-active');
     }
 
-    const timestamp = new Date(busData.timestamp * 1000);
-    const formattedDate = timestamp.toLocaleDateString('en-US', {
+    let displayLat = Number.parseFloat(busData.latitude).toFixed(6);
+    let displayLng = Number.parseFloat(busData.longitude).toFixed(6);
+    let displayTimestamp = new Date(
+      busData.timestamp * 1000
+    ).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
@@ -236,6 +232,38 @@ export class UIManager {
       minute: '2-digit',
       hour12: true,
     });
+    let locationNote = '';
+
+    // If bus is broken, try to get last known valid location from localStorage
+    if (isBroken) {
+      const storedLocation = localStorage.getItem(
+        `brokenBusLastLocation_${busId}`
+      );
+      if (storedLocation) {
+        try {
+          const lastKnown = JSON.parse(storedLocation);
+          displayLat = Number.parseFloat(lastKnown.lat).toFixed(6);
+          displayLng = Number.parseFloat(lastKnown.lng).toFixed(6);
+          displayTimestamp = new Date(
+            lastKnown.timestamp * 1000
+          ).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          });
+          locationNote =
+            '<div class="alert-message">Esta OMSA está fuera de servicio. Las coordenadas mostradas son las últimas conocidas antes de la falla.</div>';
+        } catch (e) {
+          console.error('Error parsing stored location for broken bus:', e);
+        }
+      } else {
+        locationNote =
+          '<div class="alert-message">Esta OMSA está fuera de servicio - Sin señal GPS. No se encontró una última ubicación válida.</div>';
+      }
+    }
 
     const driver = driverInfo[busId] || {
       name: 'No asignado',
@@ -243,7 +271,7 @@ export class UIManager {
       id: 'N/A',
     };
 
-    // Actualizar el título modal con el icono apropiado
+    // Update modal title with appropriate icon
     const modalTitle = modal.querySelector('#modal-title');
     if (modalTitle) {
       modalTitle.innerHTML = `🚌 Información de la OMSA`;
@@ -252,24 +280,24 @@ export class UIManager {
     content.innerHTML = `
       <div class="bus-info">
         <div class="info-row">
-          <strong data-label="id">ID de OMSA:</strong> 
+          <strong data-label="id">ID de OMSA:</strong>
           <span>${busId}</span>
         </div>
         <div class="info-row">
-          <strong data-label="route">Ruta ID:</strong> 
+          <strong data-label="route">Ruta ID:</strong>
           <span>${
-            tripInfo && tripInfo.routeId
-              ? tripInfo.routeId
-              : routeInfo
+            routeInfo
               ? routeInfo.id
-              : tripId
+              : tripInfo
+              ? tripInfo.routeId
+              : 'Desconocido'
           }</span>
         </div>
         ${
           routeInfo
             ? `
           <div class="info-row">
-            <strong data-label="route">Ruta:</strong> 
+            <strong data-label="route">Ruta:</strong>
             <span>${routeInfo.shortName} - ${routeInfo.longName}</span>
           </div>
         `
@@ -279,57 +307,53 @@ export class UIManager {
           tripInfo && tripInfo.headsign
             ? `
           <div class="info-row">
-            <strong data-label="direction">Destino:</strong> 
+            <strong data-label="direction">Destino:</strong>
             <span>${tripInfo.headsign}</span>
           </div>
         `
             : ''
         }
         <div class="info-row">
-          <strong data-label="status">Estado:</strong> 
+          <strong data-label="status">Estado:</strong>
           <span class="status-badge ${isBroken ? 'broken' : 'active'}">
             ${isBroken ? 'Averiada' : 'Activa'}
           </span>
         </div>
         <div class="info-row">
-          <strong data-label="direction">Dirección:</strong> 
+          <strong data-label="direction">Dirección:</strong>
           <span>${busData.direction_id === '0' ? 'Vuelta' : 'Ida'}</span>
         </div>
         <div class="info-row">
-          <strong data-label="location">Latitud:</strong> 
-          <span>${Number.parseFloat(busData.latitude).toFixed(6)}</span>
+          <strong data-label="location">Latitud:</strong>
+          <span>${displayLat}</span>
         </div>
         <div class="info-row">
-          <strong data-label="location">Longitud:</strong> 
-          <span>${Number.parseFloat(busData.longitude).toFixed(6)}</span>
+          <strong data-label="location">Longitud:</strong>
+          <span>${displayLng}</span>
         </div>
         <div class="info-row">
-          <strong data-label="time">Última actualización:</strong> 
-          <span>${formattedDate}</span>
+          <strong data-label="time">Última actualización:</strong>
+          <span>${displayTimestamp}</span>
         </div>
         <div class="info-row">
-          <strong data-label="driver">Conductor:</strong> 
+          <strong data-label="driver">Conductor:</strong>
           <span>${driver.name}</span>
         </div>
         <div class="info-row">
-          <strong data-label="driver">ID Conductor:</strong> 
+          <strong data-label="driver">ID Conductor:</strong>
           <span>${driver.id}</span>
         </div>
         <div class="info-row">
-          <strong data-label="phone">Teléfono:</strong> 
+          <strong data-label="phone">Teléfono:</strong>
           <span>${driver.phone}</span>
         </div>
-        ${
-          isBroken
-            ? '<div class="alert-message">Esta OMSA está fuera de servicio - Sin señal GPS</div>'
-            : ''
-        }
+        ${locationNote}
       </div>
     `;
 
     modal.style.display = 'block';
 
-    // Comportamiento de desplazamiento suave al contenido modal
+    // Add smooth scroll behavior to modal content
     modalContent.style.scrollBehavior = 'smooth';
   }
 
@@ -341,11 +365,11 @@ export class UIManager {
   }
 
   showAlert(message, type = 'error') {
-    // Eliminar alertas existentes
+    // Remove existing alerts
     const existingAlerts = document.querySelectorAll('.temp-alert');
     existingAlerts.forEach((alert) => alert.remove());
 
-    // Crear nueva alerta
+    // Create new alert
     const alertDiv = document.createElement('div');
     alertDiv.className = 'temp-alert';
     alertDiv.style.cssText = `
@@ -367,7 +391,7 @@ export class UIManager {
 
     document.body.appendChild(alertDiv);
 
-    // Eliminacion automatica despues de 4seg
+    // Auto remove after 4 seconds
     setTimeout(() => {
       if (alertDiv.parentNode) {
         alertDiv.remove();
@@ -384,14 +408,14 @@ export class UIManager {
       case 'info':
         return '#2196F3';
       case 'breakdown':
-        return '#F44336'; // Roja para las notificaciones de averia
+        return '#F44336'; // Red for breakdown notifications
       case 'recovery':
-        return '#4CAF50'; // Verde para notificaciones de recuperacion
+        return '#4CAF50'; // Green for recovery notifications
       default:
         return '#F44336';
     }
   }
 }
 
-// Instancia singleton
+// Create singleton instance
 export const uiManager = new UIManager();

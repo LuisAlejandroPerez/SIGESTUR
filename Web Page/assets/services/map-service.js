@@ -4,8 +4,9 @@ import { gtfsService } from './gtfs-service.js';
 export class MapService {
   constructor() {
     this.map = null;
-    this.busMarkers = new Map();
+    this.busMarkers = new Map(); // Live bus markers
     this.stopMarkers = new Map();
+    this.lastKnownBrokenMarkers = new Map(); // Markers for last known broken locations
     this.trafficLayer = null;
     this.isTrafficVisible = false;
     this.isInitialized = false;
@@ -20,10 +21,10 @@ export class MapService {
     }
 
     try {
-      // Verifica si Google esta disponible
+      // Check if google is available
       if (typeof window.google === 'undefined' || !window.google.maps) {
         console.error('Google Maps API not loaded');
-        // Intente esperar a que se cargue Google Maps
+        // Try to wait for Google Maps to load
         this.waitForGoogleMaps();
         return false;
       }
@@ -38,17 +39,20 @@ export class MapService {
         zoomControl: true,
       });
 
-      // Inicializar la capa de trafico
+      // Initialize traffic layer
       this.trafficLayer = new window.google.maps.TrafficLayer();
       this.isInitialized = true;
 
       console.log('Google Maps initialized successfully');
 
-      // La carga se detiene si hay datos GTFS disponibles
+      // Load stops if GTFS data is available
       const gtfsData = gtfsService.getGTFSData();
       if (gtfsData && gtfsData.stops) {
         this.loadStopsOnMap();
       }
+
+      // Load persisted broken bus locations
+      this.loadPersistedBrokenBusLocations();
 
       return true;
     } catch (error) {
@@ -61,7 +65,7 @@ export class MapService {
   waitForGoogleMaps() {
     console.log('Waiting for Google Maps API to load...');
     let attempts = 0;
-    const maxAttempts = 50; // 10 segundos de espera maximo
+    const maxAttempts = 50; // 10 seconds max wait
 
     const checkGoogle = () => {
       attempts++;
@@ -95,7 +99,7 @@ export class MapService {
     const gtfsData = gtfsService.getGTFSData();
     if (!gtfsData || !gtfsData.stops) return;
 
-    // Borrar los marcadores de parada existentes
+    // Clear existing stop markers
     this.stopMarkers.forEach((marker) => marker.setMap(null));
     this.stopMarkers.clear();
 
@@ -119,7 +123,7 @@ export class MapService {
           },
         });
 
-        // Añadir ventana de informacion para la parada
+        // Add info window for stop
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
             <div style="padding: 10px;">
@@ -167,13 +171,13 @@ export class MapService {
       lng: Number.parseFloat(busData.longitude),
     };
 
-    // Validar coordenadas
+    // Validate coordinates
     if (isNaN(position.lat) || isNaN(position.lng)) {
       console.warn(`Invalid coordinates for bus ${busId}:`, position);
       return;
     }
 
-    // Uitlizar verde para las OMSAS activas y rojo para las averiadas
+    // Use green for active buses, red for broken buses (though live broken are not shown)
     const iconColor = isBroken ? '#F44336' : '#4CAF50';
 
     try {
@@ -190,7 +194,7 @@ export class MapService {
         },
       });
 
-      // Agregar un click listener para mostrar la info de esa OMSA
+      // Add click listener to show bus info
       marker.addListener('click', () => {
         if (onClickCallback) {
           onClickCallback(busInfo);
@@ -206,6 +210,122 @@ export class MapService {
   clearBusMarkers() {
     this.busMarkers.forEach((marker) => marker.setMap(null));
     this.busMarkers.clear();
+  }
+
+  // New: Create marker for last known location of a broken bus
+  createLastKnownBrokenMarker(busId, lastKnownLocation) {
+    if (!this.map) {
+      console.warn(
+        'Map not initialized, cannot create last known broken marker'
+      );
+      return;
+    }
+
+    // Remove existing last known marker if it exists
+    this.removeLastKnownBrokenMarker(busId);
+
+    const position = {
+      lat: lastKnownLocation.lat,
+      lng: lastKnownLocation.lng,
+    };
+
+    const routeName = lastKnownLocation.routeInfo
+      ? `${lastKnownLocation.routeInfo.shortName} - ${lastKnownLocation.routeInfo.longName}`
+      : 'Ruta Desconocida';
+    const timestamp = new Date(
+      lastKnownLocation.timestamp * 1000
+    ).toLocaleString();
+
+    try {
+      const marker = new window.google.maps.Marker({
+        position: position,
+        map: this.map,
+        title: `OMSA ${busId} (Averiada) - Ultima ubicacion conocida`,
+        icon: {
+          url:
+            'data:image/svg+xml;charset=UTF-8,' +
+            encodeURIComponent(`
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="18" cy="18" r="12" fill="#F44336" stroke="white" stroke-width="3"/>
+              <path d="M12 12L24 24M12 24L24 12" stroke="white" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          `), // Red circle with a white cross
+          scaledSize: new window.google.maps.Size(36, 36),
+          anchor: new window.google.maps.Point(18, 18),
+        },
+      });
+
+      const infoWindow = new window.google.maps.InfoWindow({
+        content: `
+          <div style="padding: 10px;">
+            <h3 style="margin: 0 0 5px 0; color: #c62828;">🚨 OMSA ${busId} (Averiada)</h3>
+            <p style="margin: 0; color: #7f8c8d; font-size: 12px;">Última ubicación conocida antes de la falla:</p>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 12px;">Ruta: ${routeName}</p>
+            <p style="margin: 0; color: #7f8c8d; font-size: 12px;">Coordenadas: ${position.lat.toFixed(
+              6
+            )}, ${position.lng.toFixed(6)}</p>
+            <p style="margin: 0; color: #7f8c8d; font-size: 12px;">Hora: ${timestamp}</p>
+          </div>
+        `,
+      });
+
+      marker.addListener('click', () => {
+        infoWindow.open(this.map, marker);
+        // Zoom to this marker when clicked
+        this.focusOnBus(busId); // Re-use focusOnBus, which now checks lastKnownBrokenMarkers
+      });
+
+      this.lastKnownBrokenMarkers.set(busId, marker);
+      console.log(`Placed last known broken marker for bus ${busId}`);
+    } catch (error) {
+      console.error('Error creating last known broken marker:', error);
+    }
+  }
+
+  // New: Remove marker for last known location of a broken bus
+  removeLastKnownBrokenMarker(busId) {
+    const marker = this.lastKnownBrokenMarkers.get(busId);
+    if (marker) {
+      marker.setMap(null);
+      this.lastKnownBrokenMarkers.delete(busId);
+      console.log(`Removed last known broken marker for bus ${busId}`);
+    }
+  }
+
+  // New: Load all persisted broken bus locations from localStorage
+  loadPersistedBrokenBusLocations() {
+    if (!this.map) {
+      console.warn(
+        'Map not initialized, cannot load persisted broken bus locations.'
+      );
+      return;
+    }
+    console.log('Loading persisted broken bus locations from localStorage...');
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith('brokenBusLastLocation_')) {
+        const busId = key.replace('brokenBusLastLocation_', '');
+        try {
+          const lastKnownLocation = JSON.parse(localStorage.getItem(key));
+          if (
+            lastKnownLocation &&
+            lastKnownLocation.lat &&
+            lastKnownLocation.lng
+          ) {
+            this.createLastKnownBrokenMarker(busId, lastKnownLocation);
+          } else {
+            console.warn(
+              `Invalid data in localStorage for ${key}:`,
+              lastKnownLocation
+            );
+            localStorage.removeItem(key); // Clean up invalid data
+          }
+        } catch (e) {
+          console.error(`Error parsing localStorage item ${key}:`, e);
+          localStorage.removeItem(key); // Remove corrupted data
+        }
+      }
+    }
   }
 
   toggleTraffic() {
@@ -245,16 +365,22 @@ export class MapService {
   }
 
   focusOnBus(busId) {
-    const marker = this.busMarkers.get(busId);
+    // Prioritize live bus marker
+    let marker = this.busMarkers.get(busId);
+    if (!marker) {
+      // Fallback to last known broken marker
+      marker = this.lastKnownBrokenMarkers.get(busId);
+    }
+
     if (marker && this.map) {
       this.map.setCenter(marker.getPosition());
-      this.map.setZoom(15);
+      this.map.setZoom(15); // Zoom in for better visibility
       return true;
     }
     return false;
   }
 
-  // Metodos de utilidad
+  // Utility methods
   isMapReady() {
     return this.isInitialized && !!this.map;
   }
@@ -272,5 +398,5 @@ export class MapService {
   }
 }
 
-// Instancia singleton
+// Create singleton instance
 export const mapService = new MapService();

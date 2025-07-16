@@ -3,7 +3,8 @@ import { mapService } from './map-service.js';
 
 export class BusService {
   constructor() {
-    this.previousBusStatuses = new Map();
+    this.previousBusStatuses = new Map(); // Tracks 'active' or 'broken' status
+    this.lastValidCoordinates = new Map(); // Stores last known non-0,0 coordinates
     this.onBreakdownCallback = null;
     this.onRecoveryCallback = null;
   }
@@ -19,7 +20,7 @@ export class BusService {
     const brokenBuses = [];
     const currentBusStatuses = new Map();
 
-    // Borrar los marcadores existentes
+    // Clear existing live bus markers
     mapService.clearBusMarkers();
 
     if (!gpsData) {
@@ -27,7 +28,7 @@ export class BusService {
       return { activeBuses, brokenBuses };
     }
 
-    // Procesar cada viaje
+    // Process each trip
     Object.keys(gpsData).forEach((tripId) => {
       console.log(`Processing trip: ${tripId}`);
       const tripData = gpsData[tripId];
@@ -35,13 +36,14 @@ export class BusService {
       Object.keys(tripData).forEach((busId) => {
         const busData = tripData[busId];
 
-        // Obtener informacion del viaje a partir de los datos GTFS (si esta disponible)
+        // Get trip information from GTFS data (if available)
         const gtfsData = gtfsService.getGTFSData();
         const tripInfo =
           gtfsData && gtfsData.trips
             ? gtfsData.trips.find((trip) => trip.id === tripId)
             : null;
 
+        // Find route information using routeId from tripInfo
         const routeInfo =
           tripInfo && gtfsData.routes
             ? gtfsData.routes.find((route) => route.id === tripInfo.routeId)
@@ -54,22 +56,51 @@ export class BusService {
           routeInfo
         );
 
-        // Comprobar si el bus esta averiado (las coordenadas son 0,0 o la marca de tiempo es 0)
+        // Check if bus is broken (coordinates are 0,0 or timestamp is 0)
         const isBroken =
           (busData.latitude === 0 && busData.longitude === 0) ||
           busData.timestamp === 0;
 
-        // Track del estado actual
+        // Track current status
         currentBusStatuses.set(busId, isBroken ? 'broken' : 'active');
 
-        // Comprobar cambio de estado (activa -> averiada)
+        // Get previous status for comparison
         const previousStatus = this.previousBusStatuses.get(busId);
+
+        // Store last valid coordinates if not broken
+        if (!isBroken && busData.latitude !== 0 && busData.longitude !== 0) {
+          this.lastValidCoordinates.set(busId, {
+            lat: Number.parseFloat(busData.latitude),
+            lng: Number.parseFloat(busData.longitude),
+            timestamp: busData.timestamp,
+            routeInfo: routeInfo, // Store route info for the marker tooltip
+          });
+        }
+
+        // Handle status change: active -> broken
         if (previousStatus === 'active' && isBroken) {
-          // Mostrar notificacion - OMSA averiada
+          // Bus just broke down - show notification and save last valid location
           this.showBreakdownNotification(busId);
-        } else if (previousStatus === 'broken' && !isBroken) {
-          // Mostrar notificacion - OMSA volvio a estar online
+          const lastCoords = this.lastValidCoordinates.get(busId);
+          if (lastCoords) {
+            localStorage.setItem(
+              `brokenBusLastLocation_${busId}`,
+              JSON.stringify(lastCoords)
+            );
+            mapService.createLastKnownBrokenMarker(busId, lastCoords);
+            console.log(
+              `Saved last valid location for broken bus ${busId}:`,
+              lastCoords
+            );
+          }
+        }
+        // Handle status change: broken -> active
+        else if (previousStatus === 'broken' && !isBroken) {
+          // Bus is back online - show recovery notification and remove saved location
           this.showRecoveryNotification(busId);
+          localStorage.removeItem(`brokenBusLastLocation_${busId}`);
+          mapService.removeLastKnownBrokenMarker(busId);
+          console.log(`Removed last valid location for recovered bus ${busId}`);
         }
 
         const busInfo = {
@@ -77,7 +108,7 @@ export class BusService {
           tripId,
           data: busData,
           tripInfo,
-          routeInfo,
+          routeInfo, // Ensure routeInfo is passed correctly
           isBroken,
         };
 
@@ -85,9 +116,9 @@ export class BusService {
           brokenBuses.push(busInfo);
         } else {
           activeBuses.push(busInfo);
-          // Crear un marcador con callback para mostrar informacion del bus
+          // Create marker with callback for showing bus info
           mapService.createBusMarker(busInfo, (busInfo) => {
-            // Este callback sera menajo por el main dashboard
+            // This callback will be handled by the main dashboard
             if (window.showBusInfoModal) {
               window.showBusInfoModal(busInfo);
             }
@@ -96,7 +127,7 @@ export class BusService {
       });
     });
 
-    // Actualizar estados anteriores para la proxima comparacion
+    // Update previous statuses for next comparison
     this.previousBusStatuses.clear();
     currentBusStatuses.forEach((status, busId) => {
       this.previousBusStatuses.set(busId, status);
@@ -128,5 +159,5 @@ export class BusService {
   }
 }
 
-// Instancia singleton
+// Create singleton instance
 export const busService = new BusService();
