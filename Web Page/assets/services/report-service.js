@@ -1,4 +1,5 @@
 import { uiManager } from '../ui/ui-manager.js';
+import { getRouteInfoWithFallback } from '../config/firebase-config.js';
 
 export class ReportService {
   constructor() {
@@ -90,9 +91,11 @@ export class ReportService {
             y += 10;
             doc.setFontSize(12);
           }
-          const routeName = bus.routeInfo
-            ? `Ruta: ${bus.routeInfo.shortName} - ${bus.routeInfo.longName}`
-            : 'Ruta: Desconocida';
+
+          // Ensure we have route info with fallback
+          const routeInfo = getRouteInfoWithFallback(bus.routeInfo);
+          const routeName = `Ruta: ${routeInfo.longName}`; // Only show long name
+
           doc.text(`- OMSA ID: ${bus.id} (${routeName})`, 20, y);
           y += 7;
           doc.text(
@@ -127,5 +130,5 @@ export class ReportService {
   }
 }
 
-//nstancia singleton
+// Instancia singleton
 export const reportService = new ReportService();

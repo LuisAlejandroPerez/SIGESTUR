@@ -1,4 +1,8 @@
-import { SANTO_DOMINGO_CENTER, busIconSVG } from '../config/firebase-config.js';
+import {
+  SANTO_DOMINGO_CENTER,
+  busIconSVG,
+  getRouteInfoWithFallback,
+} from '../config/firebase-config.js';
 import { gtfsService } from './gtfs-service.js';
 
 export class MapService {
@@ -164,7 +168,16 @@ export class MapService {
       return;
     }
 
-    const { id: busId, tripId, data: busData, routeInfo, isBroken } = busInfo;
+    const {
+      id: busId,
+      tripId,
+      data: busData,
+      routeInfo: originalRouteInfo,
+      isBroken,
+    } = busInfo;
+
+    // Ensure we always have route info
+    const routeInfo = getRouteInfoWithFallback(originalRouteInfo);
 
     const position = {
       lat: Number.parseFloat(busData.latitude),
@@ -184,7 +197,7 @@ export class MapService {
       const marker = new window.google.maps.Marker({
         position: position,
         map: this.map,
-        title: `OMSA ${busId} - ${routeInfo ? routeInfo.shortName : tripId}`,
+        title: `OMSA ${busId} - ${routeInfo.shortName}`,
         icon: {
           url:
             'data:image/svg+xml;charset=UTF-8,' +
@@ -197,7 +210,8 @@ export class MapService {
       // Add click listener to show bus info
       marker.addListener('click', () => {
         if (onClickCallback) {
-          onClickCallback(busInfo);
+          // Pass the bus info with the fallback route info
+          onClickCallback({ ...busInfo, routeInfo });
         }
       });
 
@@ -229,9 +243,9 @@ export class MapService {
       lng: lastKnownLocation.lng,
     };
 
-    const routeName = lastKnownLocation.routeInfo
-      ? `${lastKnownLocation.routeInfo.shortName} - ${lastKnownLocation.routeInfo.longName}`
-      : 'Ruta Desconocida';
+    // Ensure we have route info with fallback
+    const routeInfo = getRouteInfoWithFallback(lastKnownLocation.routeInfo);
+    const routeName = `${routeInfo.shortName} - ${routeInfo.longName}`;
     const timestamp = new Date(
       lastKnownLocation.timestamp * 1000
     ).toLocaleString();
@@ -260,7 +274,9 @@ export class MapService {
           <div style="padding: 10px;">
             <h3 style="margin: 0 0 5px 0; color: #c62828;">🚨 OMSA ${busId} (Averiada)</h3>
             <p style="margin: 0; color: #7f8c8d; font-size: 12px;">Última ubicación conocida antes de la falla:</p>
-            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 12px;">Ruta: ${routeName}</p>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 12px;">Ruta: ${
+              routeInfo.longName
+            }</p>
             <p style="margin: 0; color: #7f8c8d; font-size: 12px;">Coordenadas: ${position.lat.toFixed(
               6
             )}, ${position.lng.toFixed(6)}</p>

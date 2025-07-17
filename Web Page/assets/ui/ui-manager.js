@@ -1,4 +1,7 @@
-import { driverInfo } from '../config/firebase-config.js';
+import {
+  driverInfo,
+  getRouteInfoWithFallback,
+} from '../config/firebase-config.js';
 
 export class UIManager {
   constructor() {
@@ -133,30 +136,27 @@ export class UIManager {
   }
 
   createBusListItem(busInfo, isBroken) {
-    const { id: busId, routeInfo } = busInfo; // Use routeInfo directly
+    const { id: busId } = busInfo;
 
     const item = document.createElement('div');
     item.className = `bus-item ${isBroken ? 'broken' : ''}`;
     item.innerHTML = `
-      <div>
-        <div class="bus-id">OMSA ${busId}</div>
-        ${
-          routeInfo
-            ? `<div style="font-size: 0.8rem; color: var(--text-muted);">Ruta: ${routeInfo.shortName}</div>`
-            : ''
-        }
-      </div>
-      <div class="bus-status ${isBroken ? 'broken' : 'active'}">
-        ${isBroken ? 'Averiada' : 'Activa'}
-      </div>
-    `;
+    <div>
+      <div class="bus-id">OMSA ${busId}</div>
+    </div>
+    <div class="bus-status ${isBroken ? 'broken' : 'active'}">
+      ${isBroken ? 'Averiada' : 'Activa'}
+    </div>
+  `;
 
     item.addEventListener('click', () => {
       if (!isBroken && window.focusOnBus) {
         window.focusOnBus(busId);
       }
       if (window.showBusInfoModal) {
-        window.showBusInfoModal(busInfo);
+        // Pass the bus info with the fallback route info
+        const routeInfo = getRouteInfoWithFallback(busInfo.routeInfo);
+        window.showBusInfoModal({ ...busInfo, routeInfo });
       }
     });
 
@@ -176,19 +176,23 @@ export class UIManager {
     }
 
     brokenBuses.forEach((busInfo) => {
-      const { id: busId, routeInfo } = busInfo;
+      const { id: busId, routeInfo: originalRouteInfo } = busInfo;
+
+      // Ensure we always have route info
+      const routeInfo = getRouteInfoWithFallback(originalRouteInfo);
 
       const alertItem = document.createElement('div');
       alertItem.className = 'alert-item';
       alertItem.innerHTML = `
-        <strong>OMSA ${busId}</strong>
-        ${routeInfo ? `<br><small>Ruta: ${routeInfo.shortName}</small>` : ''}
-        <br><small>Fuera de servicio - Sin señal GPS</small>
-      `;
+      <strong>OMSA ${busId}</strong>
+      <br><small>Ruta: ${routeInfo.longName}</small>
+      <br><small>Fuera de servicio - Sin señal GPS</small>
+    `;
 
       alertItem.addEventListener('click', () => {
         if (window.showBusInfoModal) {
-          window.showBusInfoModal(busInfo);
+          // Pass the bus info with the fallback route info
+          window.showBusInfoModal({ ...busInfo, routeInfo });
         }
       });
 
@@ -197,7 +201,16 @@ export class UIManager {
   }
 
   showBusInfo(busInfo) {
-    const { id: busId, data: busData, tripInfo, routeInfo, isBroken } = busInfo;
+    const {
+      id: busId,
+      data: busData,
+      tripInfo,
+      routeInfo: originalRouteInfo,
+      isBroken,
+    } = busInfo;
+
+    // Ensure we always have route info
+    const routeInfo = getRouteInfoWithFallback(originalRouteInfo);
 
     const modal = document.getElementById('bus-modal');
     const content = document.getElementById('bus-info-content');
@@ -278,78 +291,66 @@ export class UIManager {
     }
 
     content.innerHTML = `
-      <div class="bus-info">
-        <div class="info-row">
-          <strong data-label="id">ID de OMSA:</strong>
-          <span>${busId}</span>
-        </div>
-        <div class="info-row">
-          <strong data-label="route">Ruta ID:</strong>
-          <span>${
-            routeInfo
-              ? routeInfo.id
-              : tripInfo
-              ? tripInfo.routeId
-              : 'Desconocido'
-          }</span>
-        </div>
-        ${
-          routeInfo
-            ? `
-          <div class="info-row">
-            <strong data-label="route">Ruta:</strong>
-            <span>${routeInfo.shortName} - ${routeInfo.longName}</span>
-          </div>
-        `
-            : ''
-        }
-        ${
-          tripInfo && tripInfo.headsign
-            ? `
-          <div class="info-row">
-            <strong data-label="direction">Destino:</strong>
-            <span>${tripInfo.headsign}</span>
-          </div>
-        `
-            : ''
-        }
-        <div class="info-row">
-          <strong data-label="status">Estado:</strong>
-          <span class="status-badge ${isBroken ? 'broken' : 'active'}">
-            ${isBroken ? 'Averiada' : 'Activa'}
-          </span>
-        </div>
-        <div class="info-row">
-          <strong data-label="direction">Dirección:</strong>
-          <span>${busData.direction_id === '0' ? 'Vuelta' : 'Ida'}</span>
-        </div>
-        <div class="info-row">
-          <strong data-label="location">Latitud:</strong>
-          <span>${displayLat}</span>
-        </div>
-        <div class="info-row">
-          <strong data-label="location">Longitud:</strong>
-          <span>${displayLng}</span>
-        </div>
-        <div class="info-row">
-          <strong data-label="time">Última actualización:</strong>
-          <span>${displayTimestamp}</span>
-        </div>
-        <div class="info-row">
-          <strong data-label="driver">Conductor:</strong>
-          <span>${driver.name}</span>
-        </div>
-        <div class="info-row">
-          <strong data-label="driver">ID Conductor:</strong>
-          <span>${driver.id}</span>
-        </div>
-        <div class="info-row">
-          <strong data-label="phone">Teléfono:</strong>
-          <span>${driver.phone}</span>
-        </div>
-        ${locationNote}
+  <div class="bus-info">
+    <div class="info-row">
+      <strong data-label="id">ID de OMSA:</strong>
+      <span>${busId}</span>
+    </div>
+    <div class="info-row">
+      <strong data-label="route">Ruta ID:</strong>
+      <span>${routeInfo.id}</span>
+    </div>
+    <div class="info-row">
+      <strong data-label="route">Ruta:</strong>
+      <span>${routeInfo.longName}</span>
+    </div>
+    ${
+      tripInfo && tripInfo.headsign
+        ? `
+      <div class="info-row">
+        <strong data-label="direction">Destino:</strong>
+        <span>${tripInfo.headsign}</span>
       </div>
-    `;
+    `
+        : ''
+    }
+    <div class="info-row">
+      <strong data-label="status">Estado:</strong>
+      <span class="status-badge ${isBroken ? 'broken' : 'active'}">
+        ${isBroken ? 'Averiada' : 'Activa'}
+      </span>
+    </div>
+    <div class="info-row">
+      <strong data-label="direction">Dirección:</strong>
+      <span>${busData.direction_id === '0' ? 'Vuelta' : 'Ida'}</span>
+    </div>
+    <div class="info-row">
+      <strong data-label="location">Latitud:</strong>
+      <span>${displayLat}</span>
+    </div>
+    <div class="info-row">
+      <strong data-label="location">Longitud:</strong>
+      <span>${displayLng}</span>
+    </div>
+    <div class="info-row">
+      <strong data-label="time">Última actualización:</strong>
+      <span>${displayTimestamp}</span>
+    </div>
+    <div class="info-row">
+      <strong data-label="driver">Conductor:</strong>
+      <span>${driver.name}</span>
+    </div>
+    <div class="info-row">
+      <strong data-label="driver">ID Conductor:</strong>
+      <span>${driver.id}</span>
+    </div>
+    <div class="info-row">
+      <strong data-label="phone">Teléfono:</strong>
+      <span>${driver.phone}</span>
+    </div>
+    ${locationNote}
+  </div>
+`;
 
     modal.style.display = 'block';
 

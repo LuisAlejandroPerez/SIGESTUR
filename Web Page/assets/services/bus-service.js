@@ -1,5 +1,6 @@
 import { gtfsService } from './gtfs-service.js';
 import { mapService } from './map-service.js';
+import { getRouteInfoWithFallback } from '../config/firebase-config.js';
 
 export class BusService {
   constructor() {
@@ -44,10 +45,13 @@ export class BusService {
             : null;
 
         // Find route information using routeId from tripInfo
-        const routeInfo =
+        let routeInfo =
           tripInfo && gtfsData.routes
             ? gtfsData.routes.find((route) => route.id === tripInfo.routeId)
             : null;
+
+        // Apply fallback for route info
+        routeInfo = getRouteInfoWithFallback(routeInfo);
 
         console.log(
           `Bus ${busId}: tripInfo =`,
